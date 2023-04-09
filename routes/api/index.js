@@ -4,6 +4,8 @@ const loginRoute = require('./login')
 const logoutRoute = require('./logout')
 const productsRoute = require('./products')
 const categoriesRoute = require('./categories')
+const newsRoute = require('./news')
+const partnersRoute = require('./partners')
 
 // login route for Users
 router.use('/login', loginRoute)
@@ -17,6 +19,10 @@ router.use('/users', usersRoute)
 router.use('/products', productsRoute)
 
 router.use('/categories', categoriesRoute)
+
+router.use('/news', newsRoute)
+
+router.use('/partners', partnersRoute)
 
 // '/api' for any ongoing testing the root of /api route GOOD place for mounting middleware in router.use
 router.get('/', (req, res) => {
