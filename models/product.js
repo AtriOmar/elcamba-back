@@ -1,67 +1,56 @@
-const connection = require('../config/connection') // import the connection from the config to the database to make db queries
+const { Model, DataTypes } = require("sequelize");
 
-// Build a user Model to export to the controllers
-const Product = {
-    selectAll: cb => {
-        const queryString = `SELECT p.*, c.id AS category_id, c.name AS category_name 
-        FROM products AS p 
-        INNER JOIN categories AS c 
-        ON p.category_id=c.id;`
-        connection.query(queryString, (err, results) => {
-            if (err) throw err
-            cb(results)
-        })
-    },
-    getProductById: (id, done) => {
-        const queryString = `SELECT * 
-        FROM products AS p 
-        INNER JOIN categories AS c 
-        ON p.category_id=c.id WHERE id=? 
-        LIMIT 1;`
-        connection.execute(queryString, [id], (err, user) => {
-            if (err) {
-                return done(err, user)
-            }
-            return done(null, user[0])
-        })
-    },
-    selectOneByName: (username, cb) => {
-        const queryString = `SELECT * 
-        FROM products AS p 
-        INNER JOIN categories AS c 
-        ON p.category_id=c.id 
-        WHERE name=? 
-        LIMIT 1;`
-        connection.execute(queryString, [username], (err, results) => {
-            if (err) throw err
-            cb(results)
-        })
-    },
-    deleteOne: (id, cb) => {
-        const queryString = `DELETE FROM products 
-    WHERE id=?;`
-        connection.execute(queryString, [id], (err, result) => {
-            if (err) throw err
-            cb(result)
-        })
-    },
-    insertOne: (vals, cb) => {
-        const queryString = `INSERT INTO products 
-    (category_id, name, picture, description, price, isLocal, zeroWaste, isNatural, recyclable)
-     VALUES (?,?,?,?,?,?,?,?,?)`
-        connection.execute(queryString, vals, (err, result) => {
-            if (err) throw err
-            cb(result)
-        })
-    },
-    updateOne: (vals, id, cb) => {
-        vals.push(id)
-        const queryString =
-            'UPDATE products SET category_id=?, name=?, picture=?, description=?, price=?, isLocal, zeroWaste, isNatural, recyclable WHERE id=?;'
-        connection.execute(queryString, vals, (err, result) => {
-            if (err) throw err
-            cb(result)
-        })
-    }
+const db = require("../config/database");
+
+const Product = db.define(
+  "Product",
+  {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    name: DataTypes.TEXT,
+    photos: DataTypes.TEXT,
+    oldPrice: DataTypes.INTEGER,
+    price: DataTypes.INTEGER,
+    description: DataTypes.TEXT,
+    delivery: DataTypes.BOOLEAN,
+    deliveryBody: DataTypes.TEXT,
+    address: DataTypes.TEXT,
+  },
+  {
+    tableName: "products",
+    timestamps: true,
+  }
+);
+
+const SubCategory = require("./SubCategory");
+const User = require("./User1");
+
+SubCategory.hasMany(Product, { foreignKey: "subCategoryId" });
+Product.belongsTo(SubCategory, { foreignKey: "subCategoryId" });
+
+User.hasMany(Product, { foreignKey: "userId" });
+Product.belongsTo(User, { foreignKey: "userId" });
+
+// Product.sync({ force: true });
+
+const fse = require("fs-extra");
+
+async function removeUnused() {
+  const dir = await fse.readdir("./public/uploads/");
+  const products = await Product.findAll();
+  const photosArr = [];
+  products.forEach((product) => {
+    photosArr.push(...JSON.parse(product.photos));
+  });
+  console.log(photosArr);
+  const notUsed = dir.filter((file) => file.indexOf(".") > 0 && !photosArr.includes(file));
+
+  console.log(notUsed);
+
+  // notUsed.forEach((curr) => {
+  //   fse.remove("./public/uploads/" + curr);
+  // });
 }
-module.exports = Product
+
+// removeUnused();
+
+module.exports = Product;

@@ -1,64 +1,76 @@
-const db = require('../models/index.js')
-const bcrypt = require('bcrypt')
-const saltRounds = 10
+const db = require("../models/index.js");
+const bcrypt = require("bcrypt");
+const saltRounds = 10;
+const User = require("../models/User1");
+
+async function create(req, res) {
+  const body = req.body;
+
+  const hash = await bcrypt.hash(body.password, saltRounds);
+  const userData = {
+    username: body.username,
+    email: body.email,
+    password: hash,
+    accessId: 1,
+  };
+
+  console.log(userData);
+  const [result, created] = await User.findOrCreate({
+    where: {
+      email: body.email,
+    },
+    defaults: userData,
+  });
+  const user = await result.toJSON();
+
+  if (!created) {
+    res.status(400).send("email already used");
+    return;
+  }
+
+  req.logIn(user, (err) => {
+    res.status(200).send(user);
+  });
+}
+
+async function getAllUsers(req, res) {
+  const result = await User.findAll();
+  res.status(200).send(result);
+}
+
+async function getUserById(req, res) {
+  const result = await User.findByPk(req.query.id);
+  res.status(200).send(result);
+}
+
+async function updateUserById(req, res) {
+  const userData = req.body.vals; // grab onto the new user array of values
+  bcrypt.hash(userData[1], saltRounds, (err, hash) => {
+    if (err) {
+      console.error(err);
+    }
+    // use the index of the password value to pass to bcrypt
+    userData[1] = hash; // replace plain text password with hash
+    db.User.updateOne(userData, req.params.id, (result) => {
+      if (result.changedRows === 0) {
+        res.status(204).end();
+      } else {
+        res.status(200).end();
+      }
+    });
+  });
+}
+
+async function deleteUserById(req, res) {
+  db.User.deleteOne(req.params.id, (data) => {
+    res.status(200).json(data);
+  });
+}
 
 module.exports = {
-  createNewUser: (req, res) => {
-    if (req.isAuthenticated()) {
-      const body = req.body
-      bcrypt.hash(body.password, saltRounds, (err, hash) => {
-        if (err) {
-          console.error(err)
-        }
-        // use the index of the password value to pass to bcrypt
-        // Store hash in your password DB.
-        const user = [
-          body.username,
-          body.email,
-          hash,
-          body.accessId
-        ]
-        console.log(user)
-        // console.log(userData)
-        db.User.insertOne(user, result => {
-          // save new user with hashed password to database
-          res.status(200).json({ id: result.insertId })
-        })
-      }) 
-    } else {
-      res.status(400)
-    }
-  },
-  getAllUsers: (req, res) => {
-    db.User.selectAll(data => {
-      res.status(200).json(data)
-    })
-  },
-  getUserById: (req, res) => {
-    db.User.selectOneById(req.params.id, data => {
-      res.status(200).json(data)
-    })
-  },
-  updateUserById: (req, res) => {
-    const userData = req.body.vals // grab onto the new user array of values
-    bcrypt.hash(userData[1], saltRounds, (err, hash) => {
-      if (err) {
-        console.error(err)
-      }
-      // use the index of the password value to pass to bcrypt
-      userData[1] = hash // replace plain text password with hash
-      db.User.updateOne(userData, req.params.id, result => {
-        if (result.changedRows === 0) {
-          res.status(204).end()
-        } else {
-          res.status(200).end()
-        }
-      })
-    })
-  },
-  deleteUserById: (req, res) => {
-    db.User.deleteOne(req.params.id, data => {
-      res.status(200).json(data)
-    })
-  }
-}
+  create,
+  getAllUsers,
+  getUserById,
+  updateUserById,
+  deleteUserById,
+};

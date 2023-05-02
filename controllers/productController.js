@@ -1,86 +1,115 @@
-const db = require('../models/index.js')
-const { check, body, validationResult } = require('express-validator');
+const formidable = require("formidable");
+const Product = require("../models/Product");
+const SubCategory = require("../models/SubCategory.js");
+const uuidv4 = require("uuid").v4;
+const fse = require("fs-extra");
+const User = require("../models/User1.js");
+const Category = require("../models/Categorie");
 
-function removeSpaces(req, res, next) {
-    if (req.files?.image) {
-        req.files.image.name = req.files.image.name.replace(/\s/g, '');
+async function uploadFile(file) {
+  const oldPath = file.filepath;
+  const ext = file.originalFilename.slice(file.originalFilename.lastIndexOf("."));
+  const newName = uuidv4().replaceAll("-", "").toString() + ext;
+  const newPath = "./public/uploads/" + newName;
+  try {
+    await fse.move(oldPath, newPath);
+    console.log(newName);
+    return newName;
+  } catch (err) {
+    return err;
+  }
+}
+
+async function create(req, res) {
+  if (!req.isAuthenticated()) {
+    res.status(400).send("not authorized");
+    return;
+  }
+
+  console.log(req.user);
+  var form = new formidable.IncomingForm({ multiples: true });
+
+  form.parse(req, async function (err, fields, files) {
+    if (err) {
+      res.writeHead(err.httpCode || 400, { "Content-Type": "text/plain" });
+      res.end(String(err));
+      return;
     }
-    next()
+
+    // console.log("fields", fields);
+    // console.log("files", files);
+
+    const filesArr = Object.values(files);
+
+    const photos = await Promise.all(filesArr.map(uploadFile));
+    console.log(photos);
+    fields.photos = JSON.stringify(photos);
+
+    fields.userId = req.user.id;
+
+    const result = await Product.create(fields);
+
+    res.status(200).send(result);
+  });
+}
+
+async function getAll(req, res) {
+  const result = await Product.findAll({
+    include: [
+      { model: User, attributes: { exclude: "password" } },
+      { model: SubCategory, include: Category },
+    ],
+  });
+  result.forEach((product) => {
+    product.photos = JSON.parse(product.photos);
+  });
+  res.status(200).send(result);
+}
+
+async function getById(req, res) {
+  const result = await Product.findByPk(req.params.id);
+  res.status(200).send(result);
+}
+
+async function getLatest(req, res) {
+  const result = await Product.findAll({
+    order: [["createdAt", "desc"]],
+    limit: req.query.limit,
+  });
+  result.forEach((product) => {
+    product.photos = JSON.parse(product.photos);
+  });
+  res.status(200).send(result);
+}
+
+async function getByUserId(req, res) {
+  const result = await Product.findAll({
+    where: {
+      userId: req.query.id,
+    },
+    include: [{ model: User, attributes: { exclude: "password" } }, SubCategory],
+  });
+  console.log("result", result);
+  result.forEach((product) => {
+    product.photos = JSON.parse(product.photos);
+  });
+  res.status(200).send(result);
+}
+
+async function deleteById(req, res) {
+  await Product.destroy({
+    where: {
+      id: req.params.id,
+    },
+  });
+  res.status(200).end();
 }
 
 module.exports = {
-    createNewProduct: [
-        check('image').custom((value, { req }) => { if (!req.files) { throw new Error('No image uploaded.'); } return true; }),
-        removeSpaces,
-        body('name').notEmpty().withMessage('Name field is required').isLength({ max: 50 }).withMessage('product name is maximum 50 characters'),
-        (req, res) => {
-            if (req.isAuthenticated()) {
-                const errors = validationResult(req);
-                const errorMessages = errors.array().reduce((accumulator, error) => {
-                    accumulator[error.param] = error.msg;
-                    return accumulator;
-                }, {});
-                if (!errors.isEmpty()) {
-                    return res.status(400).json({ errors: errorMessages });
-                }
-
-                if (req.files?.image) {
-                    var file = req.files.image
-                    var picture = `uploads/images/${file.name}`
-                    file.mv(`./public/uploads/images/${file.name}`, err => {
-                        if (err) {
-                            console.error(err);
-                        }
-                    })
-                } else picture = ''
-
-                const reqbody = req.body
-
-                const product = [
-                    reqbody.category_id,
-                    reqbody.name,
-                    picture,
-                    reqbody.description,
-                    reqbody.price,
-                    reqbody.isLocal,
-                    reqbody.zeroWaste,
-                    reqbody.isNatural,
-                    reqbody.recyclable,
-                ]
-                console.log(product)
-
-                db.Product.insertOne(product, result => {
-                    // save new user with hashed password to database
-                    res.status(200).json({ id: result.insertId })
-                })
-            } else {
-                res.status(400)
-            }
-        }],
-    getAllProducts: (req, res) => {
-        db.Product.selectAll(data => {
-            res.status(200).json(data)
-        })
-    },
-    getProductById: (req, res) => {
-        db.Product.selectOneById(req.params.id, data => {
-            res.status(200).json(data)
-        })
-    },
-    updateProductById: (req, res) => {
-        const body = req.body
-
-        db.Product.updateOne(body, req.params.id, result => {
-            if (result.changedRows === 0) {
-                res.status(204).end()
-            } else {
-                res.status(200).end()
-            }
-        })
-    },
-    deleteProductById: (req, res) => {
-        db.Product.deleteOne(req.params.id, data => {
-            res.status(200).json(data)
-        })
-    }
-}
+  create,
+  getAll,
+  getById,
+  getLatest,
+  deleteById,
+  getByUserId,
+};

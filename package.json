@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "watch":"node --watch server.js"
   },
   "dependencies": {
     "bcrypt": "^5.0.0",
@@ -17,14 +19,18 @@
     "express-mysql-session": "^2.1.4",
     "express-session": "^1.17.1",
     "express-validator": "^6.15.0",
+    "formidable": "^2.1.1",
+    "fs-extra": "^11.1.1",
     "if-env": "^1.0.4",
     "mysql2": "^2.1.0",
+    "nodemon": "^2.0.22",
     "passport": "^0.4.1",
-    "passport-local": "^1.0.0"
+    "passport-google-oauth20": "^2.0.0",
+    "passport-local": "^1.0.0",
+    "sequelize": "^6.31.0"
   },
   "devDependencies": {
     "concurrently": "^5.2.0",
-    "nodemon": "^2.0.4",
     "prettier-standard": "^16.4.1"
   },
   "keywords": [],

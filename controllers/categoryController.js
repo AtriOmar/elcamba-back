@@ -1,48 +1,64 @@
-const db = require('../models/index.js')
+const db = require("../models/index.js");
+const Categorie = require("../models/Categorie");
+const SubCategory = require("../models/SubCategory.js");
+
+function createNewCategory(req, res) {
+  if (req.isAuthenticated()) {
+    const body = req.body;
+
+    const category = [body.name];
+    // console.log(userData)
+    db.Category.insertOne(category, (result) => {
+      // save new user with hashed password to database
+      res.status(200).json({ id: result.insertId });
+    });
+  } else {
+    res.status(400);
+  }
+}
+
+async function getAllCategories(req, res) {
+  const result = await Categorie.findAll({ include: SubCategory });
+  res.status(200).send(result);
+}
+
+async function getCategoryById(req, res) {
+  const result = await Categorie.findAll({
+    where: {
+      id: req.query.id,
+    },
+  });
+  res.status(200).send(result);
+}
+
+async function updateCategoryById(req, res) {
+  const body = req.body;
+
+  try {
+    const result = await Categorie.update(body, {
+      where: {
+        id: req.params.id,
+      },
+    });
+    res.status(200).end();
+  } catch (err) {
+    res.status(400).send(err);
+  }
+}
+
+async function deleteCategoryById(req, res) {
+  await Categorie.destroy({
+    where: {
+      id: req.params.id,
+    },
+  });
+  res.status(200).end();
+}
 
 module.exports = {
-    createNewCategory: (req, res) => {
-        if (req.isAuthenticated()) {
-            const body = req.body
-
-            const category = [
-                body.name,
-            ]
-            // console.log(userData)
-            db.Category.insertOne(category, result => {
-                // save new user with hashed password to database
-                res.status(200).json({ id: result.insertId })
-            })
-        } else {
-            res.status(400)
-        }
-    },
-    getAllCategories: (req, res) => {
-        db.Category.selectAll(data => {
-            res.status(200).json(data)
-        })
-    },
-    getCategoryById: (req, res) => {
-        db.Category.selectOneById(req.params.id, data => {
-            res.status(200).json(data)
-        })
-    },
-    updateCategoryById: (req, res) => {
-        const body = req.body
-
-        db.Category.updateOne(body, req.params.id).then(result => {
-            if (result.changedRows === 0) {
-                res.status(204).end()
-            } else {
-                res.status(200).end()
-            }
-        }).catch(err => {
-            res.send(err)
-        })
-    },
-    deleteCategoryById: (req, res) => {
-        db.Category.deleteOne(req.params.id, data => {
-            res.status(200).json(data)
-        })
-    }
-}
+  createNewCategory,
+  getAllCategories,
+  getCategoryById,
+  updateCategoryById,
+  deleteCategoryById,
+};
