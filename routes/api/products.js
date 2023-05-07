@@ -7,7 +7,11 @@ router.get("/getAll", productController.getAll);
 
 router.get("/getById", productController.getById);
 
+router.get("/getByCategoryId", productController.getByCategoryId);
+
 router.get("/getLatest", productController.getLatest);
+
+router.get("/getRandom", productController.getRandom);
 
 router.delete("/deleteById", productController.deleteById);
 

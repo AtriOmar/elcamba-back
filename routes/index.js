@@ -7,6 +7,7 @@ const productsRoute = require("./api/products");
 const categoriesRoute = require("./api/categories");
 const subCategoriesRoute = require("./api/subCategories");
 const adsRoute = require("./api/ads");
+const { default: validate } = require("deep-email-validator");
 
 // login route for Users
 router.use("/login", loginRoute);
@@ -23,6 +24,19 @@ router.use("/categories", categoriesRoute);
 router.use("/sub-categories", subCategoriesRoute);
 
 router.use("/ads", adsRoute);
+
+router.get("/verify", async (req, res) => {
+  const email = req.query.email || "atri.omar.2003@gmail.com";
+  try {
+    const result = await validate(email);
+
+    result.email = email;
+
+    res.send(result);
+  } catch (err) {
+    res.status(400).send(JSON.stringify(err));
+  }
+});
 
 // =========== SEND REACT PRODUCTION BUILD ====================
 router.get("*", (req, res) => {

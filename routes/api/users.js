@@ -13,4 +13,8 @@ router.put("/updateUserById", userController.updateUserById);
 
 router.delete("/deleteUserById", userController.deleteUserById);
 
+router.post("/sendResetEmail", userController.sendResetEmail);
+
+router.post("/resetPassword", userController.resetPassword);
+
 module.exports = router;

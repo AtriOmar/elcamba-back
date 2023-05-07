@@ -1,29 +1,32 @@
-const db = require("../models/index.js");
-const Categorie = require("../models/Categorie");
+const Category = require("../models/Category");
 const SubCategory = require("../models/SubCategory.js");
 
-function createNewCategory(req, res) {
-  if (req.isAuthenticated()) {
-    const body = req.body;
+async function create(req, res) {
+  if (!req.isAuthenticated()) {
+    res.status(400).end();
+    return;
+  }
 
-    const category = [body.name];
-    // console.log(userData)
-    db.Category.insertOne(category, (result) => {
-      // save new user with hashed password to database
-      res.status(200).json({ id: result.insertId });
-    });
-  } else {
-    res.status(400);
+  try {
+    const body = req.body;
+    console.log(req.body);
+
+    const category = { name: body.name };
+
+    const result = await Category.create(category);
+    res.status(200).send(result);
+  } catch (err) {
+    res.status(400).send(err);
   }
 }
 
 async function getAllCategories(req, res) {
-  const result = await Categorie.findAll({ include: SubCategory });
+  const result = await Category.findAll({ include: SubCategory });
   res.status(200).send(result);
 }
 
 async function getCategoryById(req, res) {
-  const result = await Categorie.findAll({
+  const result = await Category.findAll({
     where: {
       id: req.query.id,
     },
@@ -35,7 +38,7 @@ async function updateCategoryById(req, res) {
   const body = req.body;
 
   try {
-    const result = await Categorie.update(body, {
+    const result = await Category.update(body, {
       where: {
         id: req.params.id,
       },
@@ -47,7 +50,7 @@ async function updateCategoryById(req, res) {
 }
 
 async function deleteCategoryById(req, res) {
-  await Categorie.destroy({
+  await Category.destroy({
     where: {
       id: req.params.id,
     },
@@ -56,7 +59,7 @@ async function deleteCategoryById(req, res) {
 }
 
 module.exports = {
-  createNewCategory,
+  create,
   getAllCategories,
   getCategoryById,
   updateCategoryById,

@@ -13,10 +13,10 @@ const SubCategory = db.define(
   }
 );
 
-const Categorie = require("./Categorie");
+const Category = require("./Category");
 
-Categorie.hasMany(SubCategory, { foreignKey: "categoryId" });
-SubCategory.belongsTo(Categorie, { foreignKey: "categoryId" });
+Category.hasMany(SubCategory, { foreignKey: "categoryId" });
+SubCategory.belongsTo(Category, { foreignKey: "categoryId" });
 // SubCategory.sync({ force: true });
 
 // SubCategory.update({ categoryId: 5 }, { where: { id: { [Op.between]: [109, 115] } } });

@@ -1,14 +1,9 @@
 const router = require("express").Router();
 const subCategories = require("../../controllers/subCategoryController");
 
-// Matches with "/api/user"
-router
-  .route("/")
-  // GET "/api/user"
-  .get(subCategories.getAll) // Gets all the users
-  // POST "/api/user" Example Request: { "vals": ["test_user", "111111", 1] }
-  .post(subCategories.create); // create a new user
-//= ======================================================
+router.post("/create", subCategories.create);
+
+router.get("/getAll", subCategories.getAll);
 
 router.route("/getByCategId").get(subCategories.getByCategId);
 

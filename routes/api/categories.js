@@ -7,8 +7,10 @@ router
   // GET "/api/user"
   .get(categoryController.getAllCategories) // Gets all the users
   // POST "/api/user" Example Request: { "vals": ["test_user", "111111", 1] }
-  .post(categoryController.createNewCategory); // create a new user
+  .post(categoryController.create); // create a new user
 //= ======================================================
+
+router.post("/create", categoryController.create);
 
 // Matches with "/api/user/:id"
 router

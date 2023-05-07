@@ -11,13 +11,15 @@ const User = db.define(
     password: DataTypes.TEXT,
     accessId: DataTypes.INTEGER,
     active: DataTypes.BOOLEAN,
+    resetToken: DataTypes.TEXT,
+    resetTokenExpires: DataTypes.DATE,
   },
   {
     tableName: "users",
   }
 );
 
-// User.sync();
+// User.sync({ alter: true });
 
 // SubCategory.update({ categoryId: 5 }, { where: { id: { [Op.between]: [109, 115] } } });
 

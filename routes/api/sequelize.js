@@ -1,11 +1,11 @@
 const router = require("express").Router();
 
 const db = require("../../config/database");
-const Categorie = require("../../models/Categorie");
+const Category = require("../../models/Category");
 
 // Matches with "/api/user"
 router.route("/").get(async (req, res) => {
-  const result = await Categorie.findAll();
+  const result = await Category.findAll();
   console.log(result);
   res.status(200).send(result);
 });

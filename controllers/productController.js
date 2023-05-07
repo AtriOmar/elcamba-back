@@ -4,7 +4,9 @@ const SubCategory = require("../models/SubCategory.js");
 const uuidv4 = require("uuid").v4;
 const fse = require("fs-extra");
 const User = require("../models/User1.js");
-const Category = require("../models/Categorie");
+const Category = require("../models/Category");
+const db = require("../config/database");
+const { Op } = require("sequelize");
 
 async function uploadFile(file) {
   const oldPath = file.filepath;
@@ -47,6 +49,8 @@ async function create(req, res) {
 
     fields.userId = req.user.id;
 
+    fields.price ||= 0;
+
     const result = await Product.create(fields);
 
     res.status(200).send(result);
@@ -54,16 +58,21 @@ async function create(req, res) {
 }
 
 async function getAll(req, res) {
-  const result = await Product.findAll({
-    include: [
-      { model: User, attributes: { exclude: "password" } },
-      { model: SubCategory, include: Category },
-    ],
-  });
-  result.forEach((product) => {
-    product.photos = JSON.parse(product.photos);
-  });
-  res.status(200).send(result);
+  try {
+    const result = await Product.findAll({
+      include: [
+        { model: User, attributes: { exclude: "password" } },
+        { model: SubCategory, include: Category },
+      ],
+    });
+    result.forEach((product) => {
+      product.photos = JSON.parse(product.photos);
+    });
+    res.status(200).send(result);
+  } catch (err) {
+    console.log(JSON.stringify(err));
+    res.status(400).send(JSON.stringify(err));
+  }
 }
 
 async function getById(req, res) {
@@ -71,15 +80,116 @@ async function getById(req, res) {
   res.status(200).send(result);
 }
 
+async function getByCategoryId(req, res) {
+  const { categoryId, subCategoryId, limit = 10, page = 1, min = 0, max = 5000 } = req.query;
+
+  if ((!categoryId || isNaN(categoryId)) && (!subCategoryId || isNaN(subCategoryId))) {
+    res.status(400).send("invalid data");
+    return;
+  }
+
+  try {
+    if (subCategoryId && !isNaN(subCategoryId)) {
+      const dbSub = await SubCategory.findByPk(subCategoryId, {
+        include: Category,
+      });
+      const subCategory = await dbSub?.toJSON();
+
+      if (!subCategory) {
+        res.status(400).send("category not found");
+        return;
+      }
+
+      const { count, rows } = await Product.findAndCountAll({
+        where: {
+          subCategoryId,
+          price: {
+            [Op.gte]: !isNaN(min) ? Number(min) : 0,
+            [Op.lte]: !isNaN(max) ? Number(max) : 5000,
+          },
+        },
+        limit: !isNaN(limit) ? Number(limit) : 10,
+        offset: !isNaN(page) ? Number(limit) * (Number(page) - 1) : 1,
+      });
+
+      rows.forEach((product) => {
+        product.photos = JSON.parse(product.photos);
+      });
+
+      const response = {
+        subCategory,
+        category: subCategory.Category,
+        products: rows,
+        count,
+      };
+
+      console.log("getByCategoryId", response);
+      res.status(200).send(response);
+    } else {
+      const dbCategory = await Category.findByPk(categoryId);
+      const category = await dbCategory?.toJSON();
+
+      if (!category) {
+        res.status(400).send("category not found");
+        return;
+      }
+
+      const { count, rows } = await Product.findAndCountAll({
+        include: [{ model: SubCategory, where: { categoryId }, include: Category }],
+        where: {
+          price: {
+            [Op.gte]: !isNaN(min) ? Number(min) : 0,
+            [Op.lte]: !isNaN(max) ? Number(max) : 5000,
+          },
+        },
+        limit: !isNaN(limit) ? Number(limit) : 10,
+        offset: !isNaN(page) ? Number(limit) * (Number(page) - 1) : 1,
+      });
+
+      rows.forEach((product) => {
+        product.photos = JSON.parse(product.photos);
+      });
+
+      const response = {
+        category,
+        products: rows,
+        count,
+      };
+
+      console.log("getByCategoryId", response);
+      res.status(200).send(response);
+    }
+  } catch (err) {
+    res.status(400).send(err);
+    console.log(err);
+  }
+}
+
 async function getLatest(req, res) {
   const result = await Product.findAll({
     order: [["createdAt", "desc"]],
-    limit: req.query.limit,
+    limit: Number(req.query.limit) || 20,
   });
   result.forEach((product) => {
     product.photos = JSON.parse(product.photos);
   });
   res.status(200).send(result);
+}
+
+async function getRandom(req, res) {
+  try {
+    const result = await Product.findAll({
+      limit: Number(req.query.limit) || 20,
+      order: db.random(),
+    });
+    result.forEach((product) => {
+      product.photos = JSON.parse(product.photos);
+    });
+    res.status(200).send(result);
+  } catch (err) {
+    console.log(JSON.stringify(err));
+    res.status(400).send(JSON.stringify(err));
+  }
 }
 
 async function getByUserId(req, res) {
@@ -96,20 +206,34 @@ async function getByUserId(req, res) {
   res.status(200).send(result);
 }
 
+function deleteFile(file) {
+  return fse.remove("./public/uploads/" + file);
+}
+
 async function deleteById(req, res) {
-  await Product.destroy({
-    where: {
-      id: req.params.id,
-    },
-  });
-  res.status(200).end();
+  try {
+    const product = await Product.findByPk(req.body.id);
+    const photos = JSON.parse(product.photos);
+    await Promise.all(photos.map(deleteFile));
+    await Product.destroy({
+      where: {
+        id: req.body.id,
+      },
+    });
+    res.status(200).end();
+  } catch (err) {
+    console.log(err);
+    res.status(400).send(JSON.stringify(err));
+  }
 }
 
 module.exports = {
   create,
   getAll,
   getById,
+  getByCategoryId,
   getLatest,
+  getRandom,
   deleteById,
   getByUserId,
 };

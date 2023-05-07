@@ -1,4 +1,4 @@
-const Categorie = require("../models/Categorie.js");
+const Category = require("../models/Category.js");
 const db = require("../models/index.js");
 const SubCategory = require("../models/SubCategory.js");
 
@@ -21,7 +21,7 @@ async function create(req, res) {
 }
 
 async function getAll(req, res) {
-  const result = await SubCategory.findAll({ include: Categorie });
+  const result = await SubCategory.findAll({ include: Category });
   res.status(200).send(result);
 }
 
