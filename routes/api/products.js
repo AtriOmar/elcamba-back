@@ -3,6 +3,8 @@ const productController = require("../../controllers/productController");
 
 router.post("/create", productController.create);
 
+router.post("/update", productController.update);
+
 router.get("/getAll", productController.getAll);
 
 router.get("/getById", productController.getById);

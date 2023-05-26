@@ -14,6 +14,14 @@ const Product = db.define(
     delivery: DataTypes.BOOLEAN,
     deliveryBody: DataTypes.TEXT,
     address: DataTypes.TEXT,
+    visible: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
+    sold: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
   },
   {
     tableName: "products",
@@ -30,7 +38,7 @@ Product.belongsTo(SubCategory, { foreignKey: "subCategoryId" });
 User.hasMany(Product, { foreignKey: "userId" });
 Product.belongsTo(User, { foreignKey: "userId" });
 
-// Product.sync({ force: true });
+// Product.sync({ alter: true });
 
 const fse = require("fs-extra");
 

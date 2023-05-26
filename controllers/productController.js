@@ -57,6 +57,51 @@ async function create(req, res) {
   });
 }
 
+async function update(req, res) {
+  if (!req.isAuthenticated()) {
+    res.status(400).send("not authorized");
+    return;
+  }
+
+  var form = new formidable.IncomingForm({ multiples: true });
+
+  form.parse(req, async function (err, fields, files) {
+    if (err) {
+      res.writeHead(err.httpCode || 400, { "Content-Type": "text/plain" });
+      res.end(String(err));
+      return;
+    }
+
+    console.log("fields", fields);
+    console.log("files", files);
+    const { id, ...newProduct } = fields;
+
+    const product = (await Product.findByPk(id)).toJSON();
+    product.photos = JSON.parse(product.photos);
+    console.log(product);
+
+    await Product.update(newProduct, {
+      where: {
+        id,
+      },
+    });
+
+    // const filesArr = Object.values(files);
+
+    // const photos = await Promise.all(filesArr.map(uploadFile));
+    // console.log(photos);
+    // fields.photos = JSON.stringify(photos);
+
+    // fields.userId = req.user.id;
+
+    // fields.price ||= 0;
+
+    // const result = await Product.create(fields);
+
+    res.status(200).send("result");
+  });
+}
+
 async function getAll(req, res) {
   try {
     const result = await Product.findAll({
@@ -76,12 +121,31 @@ async function getAll(req, res) {
 }
 
 async function getById(req, res) {
-  const result = await Product.findByPk(req.params.id);
-  res.status(200).send(result);
+  try {
+    const result = await Product.findByPk(req.query.id, {
+      include: [
+        {
+          model: SubCategory,
+          attributes: ["id", "name"],
+          include: { model: Category, attributes: ["id", "name"] },
+        },
+        { model: User, attributes: ["id", "username"] },
+      ],
+    });
+
+    result.photos = JSON.parse(result.photos);
+
+    res.status(200).send(result);
+  } catch (err) {
+    console.log(err);
+    res.status(400).send(err);
+  }
 }
 
 async function getByCategoryId(req, res) {
-  const { categoryId, subCategoryId, limit = 10, page = 1, min = 0, max = 5000 } = req.query;
+  const { categoryId, subCategoryId, limit = 10, page = 1, min = 0, max = 5000, order, orderBy } = req.query;
+
+  console.log("orderBy", orderBy, "order", order);
 
   if ((!categoryId || isNaN(categoryId)) && (!subCategoryId || isNaN(subCategoryId))) {
     res.status(400).send("invalid data");
@@ -108,6 +172,7 @@ async function getByCategoryId(req, res) {
             [Op.lte]: !isNaN(max) ? Number(max) : 5000,
           },
         },
+        order: [[orderBy, order]],
         limit: !isNaN(limit) ? Number(limit) : 10,
         offset: !isNaN(page) ? Number(limit) * (Number(page) - 1) : 1,
       });
@@ -123,7 +188,6 @@ async function getByCategoryId(req, res) {
         count,
       };
 
-      console.log("getByCategoryId", response);
       res.status(200).send(response);
     } else {
       const dbCategory = await Category.findByPk(categoryId);
@@ -142,6 +206,7 @@ async function getByCategoryId(req, res) {
             [Op.lte]: !isNaN(max) ? Number(max) : 5000,
           },
         },
+        order: [[orderBy, order]],
         limit: !isNaN(limit) ? Number(limit) : 10,
         offset: !isNaN(page) ? Number(limit) * (Number(page) - 1) : 1,
       });
@@ -156,7 +221,6 @@ async function getByCategoryId(req, res) {
         count,
       };
 
-      console.log("getByCategoryId", response);
       res.status(200).send(response);
     }
   } catch (err) {
@@ -177,17 +241,33 @@ async function getLatest(req, res) {
 }
 
 async function getRandom(req, res) {
+  const { categoryId, subCategoryId } = req.query;
+
+  let options = {};
+  if (categoryId && !isNaN(categoryId)) {
+    options.include = {
+      model: SubCategory,
+      attributes: ["id", "categoryId"],
+      where: {
+        categoryId,
+      },
+    };
+  } else if (subCategoryId && !isNaN(subCategoryId)) {
+    options.where = { subCategoryId };
+  }
+
   try {
     const result = await Product.findAll({
       limit: Number(req.query.limit) || 20,
       order: db.random(),
+      ...options,
     });
     result.forEach((product) => {
       product.photos = JSON.parse(product.photos);
     });
     res.status(200).send(result);
   } catch (err) {
-    console.log(JSON.stringify(err));
+    console.log(err);
     res.status(400).send(JSON.stringify(err));
   }
 }
@@ -229,6 +309,7 @@ async function deleteById(req, res) {
 
 module.exports = {
   create,
+  update,
   getAll,
   getById,
   getByCategoryId,
