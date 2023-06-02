@@ -61,4 +61,13 @@ async function removeUnused() {
 
 // removeUnused();
 
+// Product.update(
+//   { photos: "[]" },
+//   {
+//     where: {
+//       id: 1,
+//     },
+//   }
+// );
+
 module.exports = Product;

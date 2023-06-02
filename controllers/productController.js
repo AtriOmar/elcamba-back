@@ -57,6 +57,10 @@ async function create(req, res) {
   });
 }
 
+function removeFile(file) {
+  return fse.remove("./public/uploads/" + file);
+}
+
 async function update(req, res) {
   if (!req.isAuthenticated()) {
     res.status(400).send("not authorized");
@@ -74,11 +78,23 @@ async function update(req, res) {
 
     console.log("fields", fields);
     console.log("files", files);
+
+    const filesArr = Object.values(files);
     const { id, ...newProduct } = fields;
+
+    newProduct.photos = JSON.parse(newProduct.photos);
 
     const product = (await Product.findByPk(id)).toJSON();
     product.photos = JSON.parse(product.photos);
-    console.log(product);
+
+    const removedPhotos = product.photos.filter((photo) => !newProduct.photos.includes(photo));
+    await Promise.all(removedPhotos.map(removeFile));
+
+    const photos = await Promise.all(filesArr.map(uploadFile));
+    console.log(photos);
+    newProduct.photos.push(...photos);
+
+    newProduct.photos = JSON.stringify(newProduct.photos);
 
     await Product.update(newProduct, {
       where: {
@@ -105,6 +121,10 @@ async function update(req, res) {
 async function getAll(req, res) {
   try {
     const result = await Product.findAll({
+      where: {
+        visible: true,
+        sold: false,
+      },
       include: [
         { model: User, attributes: { exclude: "password" } },
         { model: SubCategory, include: Category },
@@ -171,6 +191,8 @@ async function getByCategoryId(req, res) {
             [Op.gte]: !isNaN(min) ? Number(min) : 0,
             [Op.lte]: !isNaN(max) ? Number(max) : 5000,
           },
+          visible: true,
+          sold: false,
         },
         order: [[orderBy, order]],
         limit: !isNaN(limit) ? Number(limit) : 10,
@@ -205,6 +227,8 @@ async function getByCategoryId(req, res) {
             [Op.gte]: !isNaN(min) ? Number(min) : 0,
             [Op.lte]: !isNaN(max) ? Number(max) : 5000,
           },
+          visible: true,
+          sold: false,
         },
         order: [[orderBy, order]],
         limit: !isNaN(limit) ? Number(limit) : 10,
@@ -286,15 +310,11 @@ async function getByUserId(req, res) {
   res.status(200).send(result);
 }
 
-function deleteFile(file) {
-  return fse.remove("./public/uploads/" + file);
-}
-
 async function deleteById(req, res) {
   try {
     const product = await Product.findByPk(req.body.id);
     const photos = JSON.parse(product.photos);
-    await Promise.all(photos.map(deleteFile));
+    await Promise.all(photos.map(removeFile));
     await Product.destroy({
       where: {
         id: req.body.id,

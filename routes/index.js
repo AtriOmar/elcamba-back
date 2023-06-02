@@ -7,6 +7,7 @@ const productsRoute = require("./api/products");
 const categoriesRoute = require("./api/categories");
 const subCategoriesRoute = require("./api/subCategories");
 const adsRoute = require("./api/ads");
+const paymentRoute = require("./api/payment");
 const { default: validate } = require("deep-email-validator");
 
 // login route for Users
@@ -24,6 +25,8 @@ router.use("/categories", categoriesRoute);
 router.use("/sub-categories", subCategoriesRoute);
 
 router.use("/ads", adsRoute);
+
+router.use("/payment", paymentRoute);
 
 router.get("/verify", async (req, res) => {
   const email = req.query.email || "atri.omar.2003@gmail.com";
