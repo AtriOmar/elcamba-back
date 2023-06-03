@@ -33,4 +33,27 @@ Ad.belongsTo(User, { foreignKey: "userId" });
 
 // Ad.sync({ alter: true });
 
+const fse = require("fs-extra");
+
+async function removeUnused() {
+  const dir = await fse.readdir("./public/uploads/ads");
+  const ads = await Ad.findAll();
+  const photosArr = [];
+  ads.forEach((ad) => {
+    if (ad.photo) {
+      photosArr.push(ad.photo);
+    }
+  });
+  console.log(photosArr);
+  const notUsed = dir.filter((file) => file.indexOf(".") > 0 && !photosArr.includes(file));
+
+  console.log(notUsed);
+
+  // notUsed.forEach((curr) => {
+  //   fse.remove("./public/uploads/ads/" + curr);
+  // });
+}
+
+// removeUnused();
+
 module.exports = Ad;
