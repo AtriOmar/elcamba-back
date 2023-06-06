@@ -7,12 +7,13 @@ router.route("/").get((req, res) => {
       console.log(err);
     }
     res.status(200).json({
-      user: {
-        accessId: 0,
-        type: "visitor",
-        id: 0,
-        username: "",
-      },
+      // user: {
+      //   accessId: 0,
+      //   type: "visitor",
+      //   id: 0,
+      //   username: "",
+      // },
+      user: null,
     });
   });
   req.logout();

@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const subCategories = require("../../controllers/subCategoryController");
+const subCategories = require("../controllers/subCategoryController");
 
 router.post("/create", subCategories.create);
 

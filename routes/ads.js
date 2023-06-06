@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const adController = require("../../controllers/adController");
+const adController = require("../controllers/adController");
 
 router.post("/create", adController.create);
 

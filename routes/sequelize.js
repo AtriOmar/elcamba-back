@@ -1,7 +1,7 @@
 const router = require("express").Router();
 
-const db = require("../../config/database");
-const Category = require("../../models/Category");
+const db = require("../config/database");
+const Category = require("../models/Category");
 
 // Matches with "/api/user"
 router.route("/").get(async (req, res) => {

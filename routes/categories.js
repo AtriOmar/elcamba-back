@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const categoryController = require("../../controllers/categoryController");
+const categoryController = require("../controllers/categoryController");
 
 // Matches with "/api/user"
 router

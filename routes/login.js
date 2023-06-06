@@ -27,12 +27,13 @@ router.route("/status").get((req, res) => {
     return res.status(200).json({ user: req.user });
   }
   res.status(200).json({
-    user: {
-      accessId: 0,
-      type: "visitor",
-      userId: 0,
-      username: "",
-    },
+    // user: {
+    //   accessId: 0,
+    //   type: "visitor",
+    //   userId: 0,
+    //   username: "",
+    // },
+    user: null,
   });
 });
 
