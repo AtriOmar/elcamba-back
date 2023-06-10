@@ -17,11 +17,11 @@ const Message = db.define(
 const Conversation = require("./Conversation");
 const User = require("./User1");
 
-Conversation.hasMany(Message, { foreignKey: "conversationId" });
-Message.belongsTo(Conversation, { foreignKey: "conversationId" });
+Conversation.hasMany(Message, { foreignKey: "conversationId", onDelete: "CASCADE" });
+Message.belongsTo(Conversation, { foreignKey: "conversationId", onDelete: "CASCADE" });
 
-User.hasMany(Message, { foreignKey: "senderId" });
-Message.belongsTo(User, { foreignKey: "senderId" });
+User.hasMany(Message, { foreignKey: "senderId", onDelete: "CASCADE" });
+Message.belongsTo(User, { foreignKey: "senderId", onDelete: "CASCADE" });
 
 // Message.sync({ alter: true });
 

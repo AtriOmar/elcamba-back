@@ -22,7 +22,7 @@ async function uploadFile(file) {
   }
 }
 
-async function create(req, res) {
+exports.create = async function create(req, res) {
   if (!req.isAuthenticated()) {
     res.status(400).send("not authorized");
     return;
@@ -55,13 +55,13 @@ async function create(req, res) {
 
     res.status(200).send(result);
   });
-}
+};
 
 function removeFile(file) {
   return fse.remove("./public/uploads/" + file);
 }
 
-async function update(req, res) {
+exports.update = async function update(req, res) {
   if (!req.isAuthenticated()) {
     res.status(400).send("not authorized");
     return;
@@ -80,7 +80,10 @@ async function update(req, res) {
     console.log("files", files);
 
     const filesArr = Object.values(files);
-    const { id, ...newProduct } = fields;
+
+    const { id } = fields;
+    const { photos, name, subCategoryId, salePrice, price, description, delivery, city, address, visible, sold } = fields;
+    const newProduct = { photos, name, subCategoryId, salePrice, price, description, delivery, city, address, visible, sold };
 
     newProduct.photos = JSON.parse(newProduct.photos);
 
@@ -90,9 +93,9 @@ async function update(req, res) {
     const removedPhotos = product.photos.filter((photo) => !newProduct.photos.includes(photo));
     await Promise.all(removedPhotos.map(removeFile));
 
-    const photos = await Promise.all(filesArr.map(uploadFile));
+    const photosArr = await Promise.all(filesArr.map(uploadFile));
     console.log(photos);
-    newProduct.photos.push(...photos);
+    newProduct.photos.push(...photosArr);
 
     newProduct.photos = JSON.stringify(newProduct.photos);
 
@@ -114,11 +117,11 @@ async function update(req, res) {
 
     // const result = await Product.create(fields);
 
-    res.status(200).send("result");
+    res.status(200).send("updated");
   });
-}
+};
 
-async function getAll(req, res) {
+exports.getAll = async function getAll(req, res) {
   try {
     const result = await Product.findAll({
       where: {
@@ -138,9 +141,9 @@ async function getAll(req, res) {
     console.log(JSON.stringify(err));
     res.status(400).send(JSON.stringify(err));
   }
-}
+};
 
-async function getById(req, res) {
+exports.getById = async function getById(req, res) {
   try {
     const result = await Product.findByPk(req.query.id, {
       include: [
@@ -149,23 +152,26 @@ async function getById(req, res) {
           attributes: ["id", "name"],
           include: { model: Category, attributes: ["id", "name"] },
         },
-        { model: User, attributes: ["id", "username"] },
+        { model: User, attributes: ["id", "username", "picture", "phone"] },
       ],
     });
 
-    result.photos = JSON.parse(result.photos);
+    result && (result.photos = JSON.parse(result.photos));
 
     res.status(200).send(result);
   } catch (err) {
     console.log(err);
     res.status(400).send(err);
   }
-}
+};
 
-async function getByCategoryId(req, res) {
-  const { categoryId, subCategoryId, limit = 10, page = 1, min = 0, max = 5000, order, orderBy } = req.query;
+exports.getByCategoryId = async function getByCategoryId(req, res) {
+  const { categoryId, subCategoryId, limit = 10, page = 1, min = 0, max = 5000, order, orderBy, delivery } = req.query;
 
-  console.log("orderBy", orderBy, "order", order);
+  const filteredCities = req.query.cities === "all" ? "all" : req.query.cities?.split?.("-").map?.((city) => cities[city]);
+
+  console.log("-------------------- filteredCities --------------------");
+  console.log(filteredCities);
 
   if ((!categoryId || isNaN(categoryId)) && (!subCategoryId || isNaN(subCategoryId))) {
     res.status(400).send("invalid data");
@@ -184,7 +190,7 @@ async function getByCategoryId(req, res) {
         return;
       }
 
-      const { count, rows } = await Product.findAndCountAll({
+      const options = {
         where: {
           subCategoryId,
           price: {
@@ -197,6 +203,22 @@ async function getByCategoryId(req, res) {
         order: [[orderBy, order]],
         limit: !isNaN(limit) ? Number(limit) : 10,
         offset: !isNaN(page) ? Number(limit) * (Number(page) - 1) : 1,
+      };
+
+      if (delivery === "y") {
+        options.where.delivery = {
+          [Op.ne]: "",
+        };
+      }
+
+      if (filteredCities !== "all") {
+        options.where.city = {
+          [Op.in]: filteredCities,
+        };
+      }
+
+      const { count, rows } = await Product.findAndCountAll({
+        ...options,
       });
 
       rows.forEach((product) => {
@@ -220,8 +242,7 @@ async function getByCategoryId(req, res) {
         return;
       }
 
-      const { count, rows } = await Product.findAndCountAll({
-        include: [{ model: SubCategory, where: { categoryId }, include: Category }],
+      const options = {
         where: {
           price: {
             [Op.gte]: !isNaN(min) ? Number(min) : 0,
@@ -230,9 +251,26 @@ async function getByCategoryId(req, res) {
           visible: true,
           sold: false,
         },
+        include: [{ model: SubCategory, where: { categoryId }, include: Category }],
         order: [[orderBy, order]],
         limit: !isNaN(limit) ? Number(limit) : 10,
         offset: !isNaN(page) ? Number(limit) * (Number(page) - 1) : 1,
+      };
+
+      if (delivery === "y") {
+        options.where.delivery = {
+          [Op.ne]: "",
+        };
+      }
+
+      if (filteredCities !== "all") {
+        options.where.city = {
+          [Op.in]: filteredCities,
+        };
+      }
+
+      const { count, rows } = await Product.findAndCountAll({
+        ...options,
       });
 
       rows.forEach((product) => {
@@ -251,9 +289,9 @@ async function getByCategoryId(req, res) {
     res.status(400).send(err);
     console.log(err);
   }
-}
+};
 
-async function getLatest(req, res) {
+exports.getLatest = async function getLatest(req, res) {
   const result = await Product.findAll({
     order: [["createdAt", "desc"]],
     limit: Number(req.query.limit) || 20,
@@ -262,9 +300,9 @@ async function getLatest(req, res) {
     product.photos = JSON.parse(product.photos);
   });
   res.status(200).send(result);
-}
+};
 
-async function getRandom(req, res) {
+exports.getRandom = async function getRandom(req, res) {
   const { categoryId, subCategoryId } = req.query;
 
   let options = {};
@@ -294,23 +332,38 @@ async function getRandom(req, res) {
     console.log(err);
     res.status(400).send(JSON.stringify(err));
   }
-}
+};
 
-async function getByUserId(req, res) {
-  const result = await Product.findAll({
+exports.getByUserId = async function getByUserId(req, res) {
+  const { limit, orderBy, order, search } = req.query;
+
+  const options = {
     where: {
       userId: req.query.id,
+      name: {
+        [Op.like]: `%${search}%`,
+      },
     },
+    limit: Number(limit) >= 1 ? Number(limit) : 10,
     include: [{ model: User, attributes: { exclude: "password" } }, SubCategory],
-  });
+    order: [[]],
+  };
+
+  if (orderBy === "name") options.order[0][0] = "name";
+  else if (orderBy === "createdAt") options.order[0][0] = "createdAt";
+
+  if (order === "asc") options.order[0][1] = "asc";
+  else options.order[0][1] = "desc";
+
+  const result = await Product.findAll(options);
   console.log("result", result);
   result.forEach((product) => {
     product.photos = JSON.parse(product.photos);
   });
   res.status(200).send(result);
-}
+};
 
-async function deleteById(req, res) {
+exports.deleteById = async function deleteById(req, res) {
   try {
     const product = await Product.findByPk(req.body.id);
     const photos = JSON.parse(product.photos);
@@ -325,16 +378,31 @@ async function deleteById(req, res) {
     console.log(err);
     res.status(400).send(JSON.stringify(err));
   }
-}
-
-module.exports = {
-  create,
-  update,
-  getAll,
-  getById,
-  getByCategoryId,
-  getLatest,
-  getRandom,
-  deleteById,
-  getByUserId,
 };
+
+const cities = [
+  "ariana",
+  "béja",
+  "ben arous",
+  "bizerte",
+  "gabes",
+  "gafsa",
+  "jendouba",
+  "kairouan",
+  "kasserine",
+  "kebili",
+  "la manouba",
+  "le kef",
+  "mahdia",
+  "médenine",
+  "monastir",
+  "nabeul",
+  "sfax",
+  "sidi bouzid",
+  "siliana",
+  "sousse",
+  "tataouine",
+  "tozeur",
+  "tunis",
+  "zaghouan",
+];

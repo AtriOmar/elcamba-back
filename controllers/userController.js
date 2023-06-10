@@ -5,6 +5,10 @@ const User = require("../models/User1");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const { Op } = require("sequelize");
+const formidable = require("formidable");
+const uuidv4 = require("uuid").v4;
+const fse = require("fs-extra");
+const sharp = require("sharp");
 
 async function create(req, res) {
   const body = req.body;
@@ -31,7 +35,7 @@ async function create(req, res) {
     return;
   }
 
-  req.logIn(user, (err) => {
+  req.logIn(user, async (err) => {
     res.status(200).send(user);
   });
 }
@@ -46,23 +50,138 @@ async function getUserById(req, res) {
   res.status(200).send(result);
 }
 
-async function updateUserById(req, res) {
-  const userData = req.body.vals; // grab onto the new user array of values
-  bcrypt.hash(userData[1], saltRounds, (err, hash) => {
-    if (err) {
-      console.error(err);
-    }
-    // use the index of the password value to pass to bcrypt
-    userData[1] = hash; // replace plain text password with hash
-    db.User.updateOne(userData, req.params.id, (result) => {
-      if (result.changedRows === 0) {
-        res.status(204).end();
-      } else {
-        res.status(200).end();
+exports.updateInfo = async function updateInfo(req, res) {
+  if (!req.isAuthenticated()) {
+    res.status(400).send("not authorized");
+    return;
+  }
+
+  const user = req.user;
+
+  try {
+    const { username, city, address, phone } = req.body;
+
+    console.log("-------------------- req.body --------------------");
+    console.log(req.body);
+
+    await User.update(
+      {
+        username,
+        city,
+        address,
+        phone,
+      },
+      {
+        where: {
+          id: user.id,
+        },
       }
+    );
+
+    const userData = (await User.findByPk(user.id)).toJSON();
+
+    req.logIn(userData, (err) => {
+      if (err) {
+        res.status(400).send(err);
+        return;
+      }
+      delete userData.password;
+      res.send(userData);
     });
-  });
+  } catch (err) {
+    res.status(400).send(err);
+    console.log(err);
+  }
+};
+
+function removeFile(file) {
+  return fse.remove("./public/uploads/profile-pictures/" + file);
 }
+
+async function uploadFile(file) {
+  const oldPath = file.filepath;
+  const ext = file.originalFilename.slice(file.originalFilename.lastIndexOf("."));
+  const newName = uuidv4().replaceAll("-", "").toString() + ext;
+  const newPath = "./public/uploads/profile-pictures/" + newName;
+  try {
+    console.log("-------------------- file.mimetype --------------------");
+    console.log(file.mimetype);
+    if (file.mimetype.endsWith("gif") || file.mimetype.includes("svg")) {
+      await fse.move(oldPath, newPath);
+    } else if (file.mimetype.endsWith("png")) {
+      await sharp(oldPath)
+        .resize({
+          width: 300,
+        })
+        .flatten({ background: "white" })
+        .jpeg({ mozjpeg: true, force: true })
+        .toFile(newPath);
+    } else {
+      await sharp(oldPath)
+        .resize({
+          width: 300,
+        })
+        .jpeg({ mozjpeg: true, force: true })
+        .toFile(newPath);
+    }
+    console.log(newName);
+    return newName;
+  } catch (err) {
+    return err;
+  }
+}
+
+exports.updatePicture = async function updatePicture(req, res) {
+  if (!req.isAuthenticated()) {
+    res.status(400).send("not authorized");
+    return;
+  }
+
+  const user = req.user;
+
+  try {
+    var form = new formidable.IncomingForm({ multiples: true });
+
+    form.parse(req, async function (err, fields, files) {
+      if (err) {
+        res.writeHead(err.httpCode || 400, { "Content-Type": "text/plain" });
+        res.end(String(err));
+        return;
+      }
+
+      const picture = Object.values(files)[0];
+
+      if (user.picture) {
+        await removeFile(user.picture);
+      }
+
+      const pictureName = picture ? await uploadFile(picture) : null;
+
+      await User.update(
+        { picture: pictureName },
+        {
+          where: {
+            id: user.id,
+          },
+        }
+      );
+
+      const userData = (await User.findByPk(user.id)).toJSON();
+
+      req.logIn(userData, (err) => {
+        if (err) {
+          res.status(400).send(err);
+          return;
+        }
+        delete userData.password;
+        res.status(200).send(userData);
+      });
+    });
+  } catch (err) {
+    res.status(400).send(err);
+    console.log(err);
+  }
+};
 
 async function deleteUserById(req, res) {
   db.User.deleteOne(req.params.id, (data) => {
@@ -160,10 +279,10 @@ async function resetPassword(req, res) {
 }
 
 module.exports = {
+  ...module.exports,
   create,
   getAllUsers,
   getUserById,
-  updateUserById,
   deleteUserById,
   sendResetEmail,
   resetPassword,

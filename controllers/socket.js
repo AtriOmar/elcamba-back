@@ -28,7 +28,7 @@ async function sendTitles(io, userId) {
       attributes: {
         include: [
           [
-            Sequelize.literal("(SELECT `createdAt` FROM `Messages` WHERE `Messages`.`conversationId` = `Conversation`.`id` ORDER BY `createdAt` DESC LIMIT 1)"),
+            Sequelize.literal("(SELECT `createdAt` FROM `messages` WHERE `messages`.`conversationId` = `Conversation`.`id` ORDER BY `createdAt` DESC LIMIT 1)"),
             "lastMessageCreatedAt",
           ],
         ],
@@ -39,23 +39,23 @@ async function sendTitles(io, userId) {
         {
           model: User,
           as: "User1",
-          attributes: ["id", "username"],
+          attributes: ["id", "username", "picture"],
         },
         {
           model: User,
           as: "User2",
-          attributes: ["id", "username"],
+          attributes: ["id", "username", "picture"],
         },
       ],
     });
-    console.log("-------------------- sending to  --------------------");
-    console.log(userId);
+    // console.log("-------------------- sending to  --------------------");
+    // console.log(userId);
     io.to(userId).emit(
       "conversations",
       result.map((curr) => curr.toJSON())
     );
-    console.log("-------------------- sendTitles result.toJSON() --------------------");
-    console.log(result.map((curr) => curr.toJSON()));
+    // console.log("-------------------- sendTitles result.toJSON() --------------------");
+    // console.log(result.map((curr) => curr.toJSON()));
   } catch (err) {
     console.log("sendTitles", err);
   }
@@ -70,7 +70,7 @@ async function onWatchSingle(socket, userId, toWatch) {
 
   try {
     const [user, conversation] = await Promise.all([
-      User.findByPk(toWatch, { attributes: ["id", "username"] }),
+      User.findByPk(toWatch, { attributes: ["id", "username", "picture"] }),
       Conversation.findOne({
         where: {
           [Op.or]: [
@@ -90,7 +90,7 @@ async function onWatchSingle(socket, userId, toWatch) {
       }),
     ]);
 
-    if (!conversation.seen?.includes(userId)) {
+    if (conversation && !conversation.seen?.includes(userId)) {
       if (!conversation.seen) {
         conversation.set({
           seen: userId,
@@ -157,6 +157,10 @@ async function sendMessage(io, userId, receiver, message) {
 
     conversation.Messages.push(result.toJSON());
 
+    // console.log("-------------------- client --------------------");
+    // var rooms = io.sockets.adapter.rooms;
+    // console.log(rooms.get(makeRoom(userId, receiver)));
+
     sendTitles(io, userId);
     sendTitles(io, receiver);
     io.to(makeRoom(userId, receiver)).emit("messages", { conversation });
@@ -173,7 +177,7 @@ async function attachEvents(io) {
     console.log("-------------------- connecting --------------------");
 
     // console.log("-------------------- socket.request.user --------------------");
-    // console.log("bananaoma", socket.request.user);
+    // console.log(socket.request.user);
 
     socket.join(userId);
 

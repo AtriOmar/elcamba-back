@@ -23,7 +23,7 @@ async function uploadFile(file) {
   const newPath = "./public/uploads/ads/" + newName;
   const metadata = await sharp(oldPath).metadata();
   try {
-    if (file.mimetype.endsWith("gif")) {
+    if (file.mimetype.endsWith("gif") || file.mimetype.endsWith("svg")) {
       await fse.move(oldPath, newPath);
     } else if (file.mimetype.endsWith("png")) {
       await sharp(oldPath)
@@ -297,7 +297,7 @@ exports.pay = async function (req, res) {
 };
 
 exports.getByUserId = async function (req, res) {
-  const { type, status, order, orderBy, adsPerPage, page } = req.query;
+  const { type, status, order, orderBy, limit, page } = req.query;
 
   const options = {
     where: {
@@ -309,8 +309,8 @@ exports.getByUserId = async function (req, res) {
         ? { [Op.or]: [{ active: 0 }, { expiresAt: { [Op.lt]: Date.now() } }] }
         : {}),
     },
-    limit: Number(adsPerPage) >= 1 ? Number(adsPerPage) : 10,
-    offset: Number(adsPerPage) >= 1 && Number(page) >= 1 ? Number(adsPerPage) * (Number(page) - 1) : 0,
+    limit: Number(limit) >= 1 ? Number(limit) : 10,
+    offset: Number(limit) >= 1 && Number(page) >= 1 ? Number(limit) * (Number(page) - 1) : 0,
     order: [[orderBy === "expiresAt" ? "expiresAt" : "startsAt", order === "desc" ? "desc" : "asc"]],
   };
   console.log("options", options);
@@ -391,6 +391,42 @@ async function getByType(req, res) {
   });
   res.status(200).send(result);
 }
+
+exports.getByEachType = async function getByEachType(req, res) {
+  const { limit } = req.query;
+
+  function fetchOneType(type) {
+    return Ad.findAll({
+      order: db.random(),
+      where: {
+        type,
+        active: true,
+        expiresAt: {
+          [Op.gt]: new Date(),
+        },
+        startsAt: {
+          [Op.lt]: new Date(),
+        },
+      },
+      limit: Number(limit),
+      include: Product,
+    });
+  }
+
+  try {
+    const result = await Promise.all([0, 1, 2, 3].map(fetchOneType));
+
+    result[0].forEach((ad) => {
+      if (ad.Product) {
+        ad.Product.photos = JSON.parse(ad.Product.photos);
+      }
+    });
+
+    res.send(result);
+  } catch (err) {
+    res.status(400).send(err);
+  }
+};
 
 async function getLatest(req, res) {
   const result = await Ad.findAll({

@@ -27,6 +27,8 @@ router.get("/getById", adController.getById);
 
 router.get("/getByType", adController.getByType);
 
+router.get("/getByEachType", adController.getByEachType);
+
 router.get("/getLatest", adController.getLatest);
 
 router.delete("/deleteById", adController.deleteById);

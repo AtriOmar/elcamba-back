@@ -37,19 +37,12 @@ router.route("/status").get((req, res) => {
   });
 });
 
-router.get("/success", (req, res) => {
-  res.status(200).send(user);
-});
-router.get("/failure", (req, res) => {
-  req.logout?.();
-});
-
 router.get("/google", passport.authenticate("google", { scope: ["profile", "email"], prompt: "select_account" }));
 
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    successRedirect: `http://localhost:5173`,
+    successRedirect: `http://localhost:5173?connected=true`,
     failureRedirect: "http://localhost:5173",
   })
 );

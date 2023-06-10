@@ -8,11 +8,14 @@ const Product = db.define(
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     name: DataTypes.TEXT,
     photos: DataTypes.TEXT,
-    oldPrice: DataTypes.INTEGER,
+    salePrice: DataTypes.INTEGER,
     price: DataTypes.INTEGER,
     description: DataTypes.TEXT,
-    delivery: DataTypes.BOOLEAN,
-    deliveryBody: DataTypes.TEXT,
+    delivery: DataTypes.TEXT,
+    city: {
+      type: DataTypes.TEXT,
+      defaultValue: "sfax",
+    },
     address: DataTypes.TEXT,
     visible: {
       type: DataTypes.BOOLEAN,

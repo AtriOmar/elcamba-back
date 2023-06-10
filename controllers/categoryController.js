@@ -20,12 +20,12 @@ async function create(req, res) {
   }
 }
 
-async function getAllCategories(req, res) {
+async function getAll(req, res) {
   const result = await Category.findAll({ include: SubCategory });
   res.status(200).send(result);
 }
 
-async function getCategoryById(req, res) {
+async function getById(req, res) {
   const result = await Category.findAll({
     where: {
       id: req.query.id,
@@ -34,13 +34,13 @@ async function getCategoryById(req, res) {
   res.status(200).send(result);
 }
 
-async function updateCategoryById(req, res) {
+async function updateById(req, res) {
   const body = req.body;
 
   try {
-    const result = await Category.update(body, {
+    const result = await Category.update(body.category, {
       where: {
-        id: req.params.id,
+        id: body.id,
       },
     });
     res.status(200).end();
@@ -49,10 +49,10 @@ async function updateCategoryById(req, res) {
   }
 }
 
-async function deleteCategoryById(req, res) {
+async function deleteById(req, res) {
   await Category.destroy({
     where: {
-      id: req.params.id,
+      id: req.query.id,
     },
   });
   res.status(200).end();
@@ -60,8 +60,8 @@ async function deleteCategoryById(req, res) {
 
 module.exports = {
   create,
-  getAllCategories,
-  getCategoryById,
-  updateCategoryById,
-  deleteCategoryById,
+  getAll,
+  getById,
+  updateById,
+  deleteById,
 };
