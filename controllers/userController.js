@@ -1,7 +1,7 @@
 const db = require("../models/index.js");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
-const User = require("../models/User1");
+const User = require("../models/User.js");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const { Op } = require("sequelize");
@@ -19,6 +19,7 @@ async function create(req, res) {
     email: body.email,
     password: hash,
     accessId: 1,
+    active: 2,
   };
 
   console.log(userData);
@@ -40,15 +41,195 @@ async function create(req, res) {
   });
 }
 
+exports.sendVerificationEmail = async function sendVerificationEmail(req, res) {
+  const { email, name } = req.body;
+  console.log("body", req.body);
+
+  try {
+    const user = await User.findOne({
+      where: {
+        email,
+      },
+      attributes: ["id"],
+    });
+
+    const verificationCode = Math.floor(Math.random() * 900000) + 100000 + "";
+    const hash = await bcrypt.hash(verificationCode, saltRounds);
+
+    if (user) {
+      res.status(400).send("email already used");
+      return;
+    }
+
+    console.log("-------------------- hash verification code --------------------");
+    console.log(hash);
+
+    const transporter = nodemailer.createTransport({
+      host: "mail.advanceticsoft.com",
+      port: 465,
+      secure: true, // true for 465, false for other ports
+      auth: {
+        user: process.env.EMAIL, // generated ethereal user
+        pass: process.env.PASSWORD, // generated ethereal password
+      },
+    });
+
+    const mailOptions = {
+      from: "Charyoul <charyoul@advanceticsoft.com>",
+      to: email,
+      subject: "Vérification de compte CHARYOUL",
+      html: verificationEmailBody(name || "Mr/Mme,", verificationCode, "1 heure"),
+    };
+
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log(info);
+      res.status(200).send(hash);
+    } catch (err) {
+      console.log(err);
+      res.status(400).send(JSON.stringify(err));
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(400).send(JSON.stringify(error));
+  }
+};
+
 async function getAllUsers(req, res) {
-  const result = await User.findAll();
+  const { limit, orderBy, order, search = "", role } = req.query;
+
+  const options = {
+    where: {
+      [Op.or]: [
+        {
+          username: {
+            [Op.like]: `%${search}%`,
+          },
+        },
+        {
+          email: {
+            [Op.like]: `%${search}%`,
+          },
+        },
+      ],
+    },
+    limit: Number(limit) >= 1 ? Number(limit) : undefined,
+    attributes: {
+      exclude: ["password"],
+    },
+  };
+
+  if (Number(search) >= 1) {
+    options.where[Op.or].push({
+      id: Number(search),
+    });
+  }
+
+  if (Number(role) >= 1 && Number(role) <= 5) {
+    options.where.accessId = Number(role);
+  }
+
+  if (orderBy) {
+    options.order = [[]];
+    if (orderBy === "username") options.order[0][0] = "username";
+    else if (orderBy === "createdAt") options.order[0][0] = "createdAt";
+    else options.order[0][0] = "id";
+
+    if (order === "asc") options.order[0][1] = "asc";
+    else options.order[0][1] = "desc";
+  }
+
+  console.log("-------------------- options --------------------");
+  console.log(options);
+
+  try {
+    const result = await User.findAll(options);
+    console.log("result", result);
+    res.status(200).send(result);
+  } catch (err) {
+    res.status(400).send(err);
+    console.log(err);
+  }
+}
+
+async function getById(req, res) {
+  const result = await User.findByPk(req.query.id, { attributes: { exclude: ["password"] } });
   res.status(200).send(result);
 }
 
-async function getUserById(req, res) {
-  const result = await User.findByPk(req.query.id);
-  res.status(200).send(result);
-}
+exports.updateRole = async function updateRole(req, res) {
+  if (!req.isAuthenticated()) {
+    res.status(400).send("not authorized");
+    return;
+  }
+
+  const user = req.user;
+
+  try {
+    const userToEdit = (await User.findByPk(req.body.id)).toJSON();
+
+    if (userToEdit.accessId >= user.accessId || user.accessId <= req.body.role) {
+      res.status(400).send("not authorized");
+      return;
+    }
+
+    const { id, role } = req.body;
+
+    await User.update(
+      {
+        accessId: role,
+      },
+      {
+        where: {
+          id: id,
+        },
+      }
+    );
+
+    const userData = (await User.findByPk(id, { attributes: { exclude: ["password"] } })).toJSON();
+
+    res.send(userData);
+  } catch (err) {
+    res.status(400).send(err);
+    console.log(err);
+  }
+};
+
+exports.toggleStatus = async function (req, res) {
+  if (!req.isAuthenticated()) {
+    res.status(400).send("not authorized");
+    return;
+  }
+
+  const user = req.user;
+
+  try {
+    const userToEdit = (await User.findByPk(req.body.id)).toJSON();
+
+    if (userToEdit.accessId >= user.accessId || user.accessId <= req.body.role) {
+      res.status(400).send("not authorized");
+      return;
+    }
+
+    const { id } = req.body;
+
+    await User.update(
+      { active: !userToEdit.active },
+      {
+        where: {
+          id,
+        },
+      }
+    );
+
+    const userData = (await User.findByPk(id, { attributes: { exclude: ["password"] } })).toJSON();
+
+    res.send(userData);
+  } catch (err) {
+    console.log(err);
+    res.status(400).send(err);
+  }
+};
 
 exports.updateInfo = async function updateInfo(req, res) {
   if (!req.isAuthenticated()) {
@@ -282,7 +463,7 @@ module.exports = {
   ...module.exports,
   create,
   getAllUsers,
-  getUserById,
+  getById,
   deleteUserById,
   sendResetEmail,
   resetPassword,
@@ -370,4 +551,85 @@ function emailBody(name, link, expiration) {
   </body>
 </html>
 `;
+}
+
+function verificationEmailBody(name, code, expiration) {
+  return `
+  <!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Vérification de compte CHARYOUL</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        font-size: 16px;
+        color: #333;
+        padding: 20px;
+      }
+      h1{
+        font-size:32px;
+        font-weight:bold;
+        color:#dc2626;
+        text-align:center;
+        border-bottom:1px solid #e2e8f0;
+        padding-bottom:10px;
+        margin:0;
+        margin-bottom:20px;
+        
+      }
+      h2 {
+        font-size: 20px;
+        font-weight: bold;
+        margin-top: 0;
+        margin-bottom: 20px;
+      }
+      p {
+        margin-top: 0;
+        margin-bottom: 20px;
+      }
+      p:first-of-type{
+        text-transform: capitalize;
+      }
+      .code {
+        width:fit-content;
+        color: #a16207;
+        background-color: #fde047;
+        padding: 10px 20px;
+        border-radius: 5px;
+        transition: background-color 150ms;
+        margin-inline:auto;
+      }
+      .code:hover {
+        background-color: #facc15;
+      }
+      .ps {
+        font-size: 12px;
+        margin-top: 20px;
+      }
+      .container{
+        max-width:600px;
+        margin:auto;
+        border:1px solid #e2e8f0;
+        border-radius:5px;
+        padding:50px 30px;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="container"">
+        <h1>CHARYOUL</h1>
+        <h2>Vérification de compte CHARYOUL</h2>
+        <p>Bonjour ${name},</p>
+        <p>Pour compléter la création de votre compte CHARYOUL, voici votre code:</p>
+        <p class="code">${code}</p>
+        <p>Si vous n'avez pas essayer de créer un compte, veuillez ignorer cet email.</p>
+        <p>Cordialement,<br />L'équipe de CHARYOUL</p>
+    </section>
+  </body>
+</html>
+  `;
 }

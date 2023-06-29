@@ -24,6 +24,11 @@ router.post("/", function (req, res, next) {
 // '/api/login/status' route
 router.route("/status").get((req, res) => {
   if (req.isAuthenticated()) {
+    if (!req.user.active) {
+      req.logOut();
+      return res.send({ user: null });
+    }
+
     return res.status(200).json({ user: req.user });
   }
   res.status(200).json({

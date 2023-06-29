@@ -1,4 +1,4 @@
-const { Model, DataTypes, DATE } = require("sequelize");
+const { Model, DataTypes, DATE, Sequelize } = require("sequelize");
 
 const db = require("../config/database");
 
@@ -10,8 +10,9 @@ const Ad = db.define(
     amount: DataTypes.INTEGER,
     type: DataTypes.INTEGER,
     photo: DataTypes.TEXT,
+    url: DataTypes.TEXT,
     paid: DataTypes.DATE,
-    active: { type: DataTypes.BOOLEAN, defaultValue: false },
+    active: { type: DataTypes.INTEGER, defaultValue: 1 },
     duration: DataTypes.INTEGER,
     startsAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     expiresAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
@@ -23,7 +24,7 @@ const Ad = db.define(
 );
 
 const Product = require("./Product");
-const User = require("./User1");
+const User = require("./User");
 
 Product.hasMany(Ad, { foreignKey: "productId" });
 Ad.belongsTo(Product, { foreignKey: "productId" });
@@ -57,3 +58,17 @@ async function removeUnused() {
 // removeUnused();
 
 module.exports = Ad;
+
+// async function updateActive() {
+//   const query = "UPDATE ads SET act = CASE WHEN active = true THEN 2 ELSE 1 END";
+//   const result = await db.query(query, { type: Sequelize.QueryTypes.UPDATE });
+// }
+
+// Ad.update(
+//   {
+//     active: db.col("act"),
+//   },
+//   {
+//     where: {},
+//   }
+// );

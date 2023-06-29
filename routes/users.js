@@ -7,9 +7,15 @@ router.get("/getAll", userController.getAllUsers);
 
 router.post("/create", userController.create);
 
-router.get("/getById", userController.getUserById);
+router.post("/sendVerificationEmail", userController.sendVerificationEmail);
+
+router.get("/getById", userController.getById);
 
 router.put("/updateInfo", userController.updateInfo);
+
+router.put("/updateRole", userController.updateRole);
+
+router.put("/toggleStatus", userController.toggleStatus);
 
 router.delete("/deleteUserById", userController.deleteUserById);
 

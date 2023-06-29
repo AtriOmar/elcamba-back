@@ -7,7 +7,7 @@ router.get("/getAll", categoryController.getAll);
 
 router.get("/getById", categoryController.getById);
 
-router.post("/updateById", categoryController.updateById);
+router.put("/updateById", categoryController.updateById);
 
 router.delete("/deleteById", categoryController.deleteById);
 

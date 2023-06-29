@@ -15,7 +15,7 @@ const Message = db.define(
 );
 
 const Conversation = require("./Conversation");
-const User = require("./User1");
+const User = require("./User");
 
 Conversation.hasMany(Message, { foreignKey: "conversationId", onDelete: "CASCADE" });
 Message.belongsTo(Conversation, { foreignKey: "conversationId", onDelete: "CASCADE" });

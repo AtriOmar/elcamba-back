@@ -9,7 +9,7 @@ router.post("/createProductPayment", adController.createProductPayment);
 
 router.post("/createPosterPayment", adController.createPosterPayment);
 
-router.post("/toggleStatus", adController.toggleStatus);
+router.put("/updateById", adController.updateById);
 
 router.get("/getByToken", adController.getByToken);
 

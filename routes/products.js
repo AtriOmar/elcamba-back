@@ -5,13 +5,15 @@ router.post("/create", productController.create);
 
 router.post("/update", productController.update);
 
+router.put("/updateById", productController.updateById);
+
 router.get("/getAll", productController.getAll);
+
+router.get("/getByEachCategory", productController.getByEachCategory);
 
 router.get("/getById", productController.getById);
 
 router.get("/getByCategoryId", productController.getByCategoryId);
-
-router.get("/getLatest", productController.getLatest);
 
 router.get("/getRandom", productController.getRandom);
 

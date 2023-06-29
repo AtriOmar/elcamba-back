@@ -1,94 +1,30 @@
-const connection = require('../config/connection') // import the connection from the config to the database to make db queries
+const { Model, DataTypes } = require("sequelize");
 
-// Build a user Model to export to the controllers
-const User = {
-  selectAll: cb => {
-    const queryString = `SELECT u.userId, u.username, u.email, u.accessId, a.type 
-      FROM users AS u 
-      INNER JOIN accessLevels AS a 
-      ON u.accessId=a.permissionLevel 
-      ORDER BY u.userId ASC;`
-    connection.query(queryString, (err, results) => {
-      if (err) throw err
-      cb(results)
-    })
+const db = require("../config/database");
+
+const User = db.define(
+  "User",
+  {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    username: DataTypes.TEXT,
+    email: DataTypes.TEXT,
+    password: DataTypes.TEXT,
+    accessId: DataTypes.INTEGER,
+    active: DataTypes.BOOLEAN,
+    picture: DataTypes.TEXT,
+    address: DataTypes.TEXT,
+    city: { type: DataTypes.TEXT, defaultValue: "ariana" },
+    phone: DataTypes.TEXT,
+    resetToken: DataTypes.TEXT,
+    resetTokenExpires: DataTypes.DATE,
   },
-  getUserByUsernameWithPassword: (username, done) => {
-    const queryString = `SELECT u.userId, u.username, u.email, u.password, u.accessId, a.type 
-      FROM users AS u 
-      INNER JOIN accessLevels AS a 
-      ON u.accessId=a.permissionLevel 
-      WHERE email=? 
-      LIMIT 1;`
-    connection.execute(queryString, [username], (err, user) => {
-      if (err) {
-        return done(err, user)
-      }
-      return done(null, user[0])
-    })
-  },
-  getUserById: (id, done) => {
-    const queryString = `SELECT u.userId, u.username, u.email, u.accessId, a.type 
-      FROM users AS u 
-      INNER JOIN accessLevels AS a 
-      ON u.accessId=a.permissionLevel WHERE userId=? 
-      LIMIT 1;`
-    connection.execute(queryString, [id], (err, user) => {
-      if (err) {
-        return done(err, user)
-      }
-      return done(null, user[0])
-    })
-  },
-  selectOneById: (id, cb) => {
-    const queryString = `SELECT u.userId, u.username, u.email, u.accessId, a.type 
-      FROM users AS u 
-      INNER JOIN accessLevels AS a 
-      ON u.accessId=a.permissionLevel 
-      WHERE userId=? 
-      LIMIT 1;`
-    connection.execute(queryString, [id], (err, results) => {
-      if (err) throw err
-      cb(results)
-    })
-  },
-  selectOneByUsername: (username, cb) => {
-    const queryString = `SELECT u.userId, u.username, u.email, u.accessId, a.type 
-      FROM users AS u 
-      INNER JOIN accessLevels AS a 
-      ON u.accessId=a.permissionLevel 
-      WHERE email=? 
-      LIMIT 1;`
-    connection.execute(queryString, [username], (err, results) => {
-      if (err) throw err
-      cb(results)
-    })
-  },
-  deleteOne: (id, cb) => {
-    const queryString = `DELETE FROM users 
-    WHERE userId=?;`
-    connection.execute(queryString, [id], (err, result) => {
-      if (err) throw err
-      cb(result)
-    })
-  },
-  insertOne: (vals, cb) => {
-    const queryString = `INSERT INTO users 
-    (username, email, password, accessId)
-     VALUES (?,?,?,?)`
-    connection.execute(queryString, vals, (err, result) => {
-      if (err) throw err
-      cb(result)
-    })
-  },
-  updateOne: (vals, id, cb) => {
-    vals.push(id)
-    const queryString =
-      'UPDATE users SET username=?, u.email=?, password=?, accessId=? WHERE userId=?;'
-    connection.execute(queryString, vals, (err, result) => {
-      if (err) throw err
-      cb(result)
-    })
+  {
+    tableName: "users",
   }
-}
-module.exports = User
+);
+
+// User.sync({ alter: true });
+
+// SubCategory.update({ categoryId: 5 }, { where: { id: { [Op.between]: [109, 115] } } });
+
+module.exports = User;

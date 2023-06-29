@@ -2,21 +2,22 @@ const { Model, DataTypes } = require("sequelize");
 
 const db = require("../config/database");
 
-const Category = db.define(
-  "Category",
+const Setting = db.define(
+  "Setting",
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     name: DataTypes.TEXT,
-    color: DataTypes.TEXT,
+    value: DataTypes.TEXT,
+    required: DataTypes.BOOLEAN,
   },
   {
-    tableName: "categories",
+    tableName: "settings",
   }
 );
 
-// Category.sync({ alter: true });
+// Setting.sync({ alter: true });
 
-// Category.update(
+// Setting.update(
 //   {
 //     color: "#3b82f6",
 //   },
@@ -25,4 +26,4 @@ const Category = db.define(
 //   }
 // );
 
-module.exports = Category;
+module.exports = Setting;

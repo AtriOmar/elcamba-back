@@ -9,6 +9,9 @@ const subCategoriesRoute = require("./subCategories");
 const adsRoute = require("./ads");
 const paymentRoute = require("./payment");
 const conversationRoute = require("./conversations");
+const searchRoute = require("./search");
+const settingsRoute = require("./settings");
+const photoRoute = require("./photo");
 const { default: validate } = require("deep-email-validator");
 
 // login route for Users
@@ -30,6 +33,12 @@ router.use("/ads", adsRoute);
 router.use("/payment", paymentRoute);
 
 router.use("/conversations", conversationRoute);
+
+router.use("/search", searchRoute);
+
+router.use("/settings", settingsRoute);
+
+router.get("/photo", photoRoute);
 
 router.get("/verify", async (req, res) => {
   const email = req.query.email || "atri.omar.2003@gmail.com";

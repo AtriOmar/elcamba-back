@@ -2,7 +2,7 @@ const formidable = require("formidable");
 const Ad = require("../models/Ad");
 const Product = require("../models/Product");
 const SubCategory = require("../models/SubCategory");
-const User = require("../models/User1");
+const User = require("../models/User");
 const uuidv4 = require("uuid").v4;
 const fse = require("fs-extra");
 const axios = require("axios");
@@ -83,6 +83,11 @@ async function create(req, res) {
 }
 
 async function createProductAd(req, res) {
+  if (!req.isAuthenticated()) {
+    res.status(400).send("not authorized");
+    return;
+  }
+
   const { body } = req;
 
   const expiresAt = new Date(Date.now + duration * 24 * 3600 * 1000);
@@ -137,8 +142,6 @@ exports.createProductPayment = async function (req, res) {
 };
 
 exports.createPosterPayment = async function (req, res) {
-  const { body } = req;
-
   const payload = {
     vendor: 2941,
     note: "Order 576587",
@@ -151,21 +154,21 @@ exports.createPosterPayment = async function (req, res) {
     webhook_url: "http://localhost:5173",
   };
 
-  try {
-    var form = new formidable.IncomingForm({ multiples: true });
+  var form = new formidable.IncomingForm({ multiples: true });
 
-    form.parse(req, async function (err, fields, files) {
-      if (err) {
-        res.writeHead(err.httpCode || 400, { "Content-Type": "text/plain" });
-        res.end(String(err));
-        return;
-      }
-
+  form.parse(req, async function (err, fields, files) {
+    if (err) {
+      res.writeHead(err.httpCode || 400, { "Content-Type": "text/plain" });
+      res.end(String(err));
+      return;
+    }
+    try {
       // console.log("fields", fields);
       // console.log("files", files);
 
       payload.amount = fields.amount;
-      const paymentRes = await axios.post("https://sandbox.paymee.tn/api/v1/payments/create", payload, { headers });
+      let paymentRes;
+      paymentRes = await axios.post("https://sandbox.paymee.tn/api/v1/payments/create", payload, { headers });
 
       const photo = files.photo;
 
@@ -173,7 +176,6 @@ exports.createPosterPayment = async function (req, res) {
       console.log("width", photo.width);
 
       const photoName = await uploadFile(photo);
-      console.log("photoName", photoName);
 
       const ad = {
         token: paymentRes.data.data.token,
@@ -182,6 +184,7 @@ exports.createPosterPayment = async function (req, res) {
         duration: fields.duration,
         photo: photoName,
         amount: fields.amount,
+        url: fields.url,
       };
       console.log("ad", ad);
 
@@ -189,35 +192,52 @@ exports.createPosterPayment = async function (req, res) {
       console.log("ad res", adRes.toJSON());
 
       res.send(paymentRes.data.data.token);
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(400).send(err);
-  }
+    } catch (error) {
+      console.log(error);
+      res.status(400).send(error);
+    }
+  });
 };
 
-exports.toggleStatus = async function (req, res) {
-  const { id } = req.body;
+exports.updateById = async function (req, res) {
+  const { id, active, paid, url } = req.body;
 
   try {
-    const adRes = await Ad.findByPk(id);
-    const ad = adRes.toJSON();
+    const ad = (await Ad.findByPk(id)).toJSON();
 
-    if (ad.userId !== req.user.id) {
+    if (req.user.accessId < 3 && ad.userId !== req.user.id) {
       res.status(400).send("not authorized");
       return;
     }
 
-    await Ad.update(
-      { active: !ad.active },
-      {
-        where: {
-          id,
-        },
-      }
-    );
+    const newData = {};
 
-    res.send("done");
+    if (active !== undefined) {
+      newData.active = active;
+    }
+
+    if (paid !== undefined) {
+      newData.paid = new Date();
+      newData.active = 2;
+      newData.startsAt = new Date();
+      newData.expiresAt = new Date(Date.now() + Number(ad.duration) * 24 * 3600 * 1000);
+    }
+
+    if (url !== undefined) {
+      newData.url = url;
+    }
+
+    const result = await Ad.update(newData, {
+      where: {
+        id,
+      },
+    });
+
+    const newAd = (
+      await Ad.findByPk(id, { include: [{ model: Product }, { model: User, attributes: ["id", "username", "picture", "phone", "accessId"] }] })
+    ).toJSON();
+
+    res.send(newAd);
   } catch (err) {
     console.log(err);
     res.status(400).send(err);
@@ -277,7 +297,7 @@ exports.pay = async function (req, res) {
     if (status) {
       const newData = {
         paid: new Date(),
-        active: true,
+        active: 2,
         startsAt: new Date(),
         expiresAt: new Date(Date.now() + Number(ad.duration) * 24 * 3600 * 1000),
       };
@@ -302,17 +322,24 @@ exports.getByUserId = async function (req, res) {
   const options = {
     where: {
       userId: req.user.id,
-      ...(type === "product" ? { type: 0 } : type === "poster" ? { type: { [Op.ne]: 0 } } : {}),
-      ...(status === "active"
-        ? { active: 1, expiresAt: { [Op.gt]: Date.now() } }
-        : status === "inactive"
-        ? { [Op.or]: [{ active: 0 }, { expiresAt: { [Op.lt]: Date.now() } }] }
-        : {}),
     },
-    limit: Number(limit) >= 1 ? Number(limit) : 10,
+    limit: Number(limit) >= 1 ? Number(limit) : undefined,
     offset: Number(limit) >= 1 && Number(page) >= 1 ? Number(limit) * (Number(page) - 1) : 0,
     order: [[orderBy === "expiresAt" ? "expiresAt" : "startsAt", order === "desc" ? "desc" : "asc"]],
   };
+
+  if (type === "product") {
+    options.where.type = 0;
+  } else if (type === "poster") {
+    options.where.type = { [Op.ne]: 0 };
+  }
+
+  if (status === "active") {
+    options.where.active = 2;
+    options.where.expiresAt = { [Op.gt]: Date.now() };
+  } else if (status === "inactive") {
+    options.where[Op.or] = [{ active: { [Op.ne]: 2 } }, { expiresAt: { [Op.lt]: Date.now() } }];
+  }
   console.log("options", options);
 
   try {
@@ -366,16 +393,75 @@ exports.getRandom = async function (req, res) {
 };
 
 async function getAll(req, res) {
-  console.log("getting all");
-  const result = await Ad.findAll();
-  res.status(200).send(result);
+  const { limit, orderBy, order, search = "", active, type, userId } = req.query;
+
+  const options = {
+    where: {},
+    limit: Number(limit) >= 1 ? Number(limit) : undefined,
+    include: [{ model: User, attributes: { exclude: "password" }, where: { username: { [Op.like]: `%${search}%` } } }, { model: Product }],
+  };
+
+  if (type === "product") {
+    options.where.type = 0;
+  } else if (type === "poster") {
+    options.where.type = { [Op.ne]: 0 };
+  } else if (type && Number(type) > 0 && Number(type) <= 4) {
+    options.where.type = Number(type);
+  }
+
+  console.log("-------------------- req.query --------------------");
+  console.log(req.query);
+
+  if (Number(userId) >= 1) {
+    options.where.userId = Number(userId);
+  }
+
+  if (active === "true") {
+    options.where.active = 2;
+    options.where.paid = { [Op.not]: null };
+    options.where.expiresAt = { [Op.gt]: Date.now() };
+  } else if (active === "false") {
+    options.where[Op.or] = [{ active: { [Op.ne]: 2 } }, { expiresAt: { [Op.lt]: Date.now() } }];
+  }
+
+  if (orderBy) {
+    options.order = [[]];
+    if (["createdAt", "expiresAt"].includes(orderBy)) {
+      options.order[0][0] = orderBy;
+    } else {
+      options.order[0][0] = "id";
+    }
+
+    if (order === "asc") options.order[0][1] = "asc";
+    else options.order[0][1] = "desc";
+  }
+
+  // console.log("-------------------- options --------------------");
+  // console.log(options);
+
+  try {
+    const result = await Ad.findAll(options);
+    // console.log("result", result);
+    result?.forEach?.((ad) => {
+      if (ad?.Product) {
+        ad.Product.photos = JSON.parse(ad.Product.photos);
+      }
+    });
+    res.status(200).send(result);
+  } catch (err) {
+    console.log(err);
+    res.status(400).send(err);
+  }
 }
 
 async function getById(req, res) {
   const result = await Ad.findByPk(req.query.id, {
-    include: { model: Product, attributes: ["name", "photos"] },
+    include: [
+      { model: Product, attributes: ["name", "photos"] },
+      { model: User, exclude: ["password"] },
+    ],
   });
-  const ad = result.toJSON();
+  const ad = result?.toJSON?.();
   if (result.Product) {
     result.Product.photos = JSON.parse(ad.Product.photos);
   }
@@ -383,13 +469,45 @@ async function getById(req, res) {
 }
 
 async function getByType(req, res) {
-  console.log("query", req.query);
-  const result = await Ad.findAll({
+  const { type, limit, active } = req.query;
+
+  const options = {
+    order: db.random(),
     where: {
-      type: req.query.type || 1,
+      type,
     },
-  });
-  res.status(200).send(result);
+    limit: Number(limit) >= 1 ? Number(limit) : undefined,
+    include: Product,
+  };
+
+  if (active) {
+    options.where = {
+      ...options.where,
+      active: 2,
+      expiresAt: {
+        [Op.gt]: new Date(),
+      },
+      startsAt: {
+        [Op.lt]: new Date(),
+      },
+    };
+  }
+
+  try {
+    const result = await Ad.findAll(options);
+
+    result.forEach((ad) => {
+      if (ad.Product) {
+        ad.Product.photos = JSON.parse(ad.Product.photos);
+      }
+    });
+
+    res.status(200).send(result);
+  } catch (err) {
+    console.log("--------------------  --------------------");
+    console.log(err);
+    res.status(400).send(err);
+  }
 }
 
 exports.getByEachType = async function getByEachType(req, res) {
@@ -400,7 +518,7 @@ exports.getByEachType = async function getByEachType(req, res) {
       order: db.random(),
       where: {
         type,
-        active: true,
+        active: 2,
         expiresAt: {
           [Op.gt]: new Date(),
         },
@@ -408,7 +526,7 @@ exports.getByEachType = async function getByEachType(req, res) {
           [Op.lt]: new Date(),
         },
       },
-      limit: Number(limit),
+      limit: type === 0 ? 10 : Number(limit),
       include: Product,
     });
   }

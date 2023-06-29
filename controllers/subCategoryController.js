@@ -1,23 +1,22 @@
-const Category = require("../models/Category.js");
-const db = require("../models/index.js");
-const SubCategory = require("../models/SubCategory.js");
+const Category = require("../models/Category");
+const db = require("../models/index");
+const SubCategory = require("../models/SubCategory");
 
 async function create(req, res) {
-  if (req.isAuthenticated()) {
-    const body = req.body;
-
-    console.log(body);
-    const result = await SubCategory.create({
-      name: body.name,
-      categoryId: body.categId,
-    });
-
-    console.log(result.toJSON());
-
-    res.status(200).send(result);
-  } else {
-    res.status(400);
+  if (!req.isAuthenticated()) {
+    res.status(400).send("not authorized");
+    return;
   }
+  const body = req.body;
+
+  const result = await SubCategory.create({
+    name: body.name,
+    categoryId: body.categoryId,
+  });
+
+  console.log(result.toJSON());
+
+  res.status(200).send(result);
 }
 
 async function getAll(req, res) {
@@ -35,28 +34,35 @@ async function getById(req, res) {
 }
 
 async function getByCategId(req, res) {
-  const { query } = req;
-  console.log(query);
-  res.status(200).send();
-  return;
-  const result = await SubCategory.findAll({
-    where: {
-      id: req.query.id,
-    },
-  });
-  res.status(200).send(result);
+  try {
+    const result = await SubCategory.findAll({
+      where: {
+        categoryId: req.query.id,
+      },
+    });
+    res.status(200).send(result);
+  } catch (err) {
+    res.status(400).send(err);
+    console.log(err);
+  }
 }
 
 async function updateById(req, res) {
-  const body = req.body;
+  if (!req.isAuthenticated()) {
+    res.status(400).send("not authorized");
+    return;
+  }
 
   try {
-    const result = await SubCategory.update(body, {
-      where: {
-        id: req.query.id,
-      },
-    });
-    res.status(200).end();
+    const result = await SubCategory.update(
+      { name: req.body.name },
+      {
+        where: {
+          id: req.body.id,
+        },
+      }
+    );
+    res.status(200).send("updated");
   } catch (err) {
     res.status(400).send(err);
   }

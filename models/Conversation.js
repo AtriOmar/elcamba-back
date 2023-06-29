@@ -13,7 +13,7 @@ const Conversation = db.define(
   }
 );
 
-const User = require("./User1");
+const User = require("./User");
 
 User.hasMany(Conversation, { as: "Conversation1", foreignKey: "userId1" });
 User.hasMany(Conversation, { as: "Conversation2", foreignKey: "userId2" });

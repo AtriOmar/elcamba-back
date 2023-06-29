@@ -2,7 +2,7 @@ const db = require("../models");
 const bcrypt = require("bcrypt");
 const LocalStrategy = require("passport-local").Strategy;
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const User = require("../models/User1");
+const User = require("../models/User");
 
 module.exports = (passport) => {
   //  ======================== Passport Session Setup ============================
@@ -15,11 +15,13 @@ module.exports = (passport) => {
   // used to deserialize the user
 
   passport.deserializeUser(async (id, done) => {
-    const user = await User.findByPk(id, {
-      attributes: {
-        exclude: "password",
-      },
-    });
+    const user = (
+      await User.findByPk(id, {
+        attributes: {
+          exclude: "password",
+        },
+      })
+    ).toJSON();
     done(null, user);
   });
 
@@ -27,6 +29,7 @@ module.exports = (passport) => {
     new LocalStrategy({ usernameField: "email", passwordField: "password", passReqToCallback: true }, async (req, username, password, done) => {
       if (req.user) {
         done(null, req.user);
+        return;
       }
 
       try {
@@ -46,6 +49,10 @@ module.exports = (passport) => {
 
         const match = await bcrypt.compare(password, user.password);
         if (match) {
+          if (!user.active) {
+            done(null, false, "suspended");
+            return;
+          }
           delete user.password;
 
           console.log(user);

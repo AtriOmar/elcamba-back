@@ -1,4 +1,4 @@
-const { Model, DataTypes } = require("sequelize");
+const { Model, DataTypes, Sequelize } = require("sequelize");
 
 const db = require("../config/database");
 
@@ -8,8 +8,8 @@ const Product = db.define(
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     name: DataTypes.TEXT,
     photos: DataTypes.TEXT,
-    salePrice: DataTypes.INTEGER,
-    price: DataTypes.INTEGER,
+    salePrice: DataTypes.DECIMAL(13, 3),
+    price: DataTypes.DECIMAL(13, 3),
     description: DataTypes.TEXT,
     delivery: DataTypes.TEXT,
     city: {
@@ -21,6 +21,7 @@ const Product = db.define(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+    active: { type: DataTypes.INTEGER, defaultValue: 2 },
     sold: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
@@ -33,7 +34,7 @@ const Product = db.define(
 );
 
 const SubCategory = require("./SubCategory");
-const User = require("./User1");
+const User = require("./User");
 
 SubCategory.hasMany(Product, { foreignKey: "subCategoryId" });
 Product.belongsTo(SubCategory, { foreignKey: "subCategoryId" });
@@ -73,4 +74,5 @@ async function removeUnused() {
 //   }
 // );
 
+// Product.sync({ alter: true });
 module.exports = Product;
