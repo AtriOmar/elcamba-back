@@ -37,7 +37,7 @@ Ad.belongsTo(User, { foreignKey: "userId" });
 const fse = require("fs-extra");
 
 async function removeUnused() {
-  const dir = await fse.readdir("./public/uploads/ads");
+  const dir = await fse.readdir("./public/uploads/abc");
   const ads = await Ad.findAll();
   const photosArr = [];
   ads.forEach((ad) => {

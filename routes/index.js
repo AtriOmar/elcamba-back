@@ -28,7 +28,7 @@ router.use("/categories", categoriesRoute);
 
 router.use("/sub-categories", subCategoriesRoute);
 
-router.use("/ads", adsRoute);
+router.use("/abc", adsRoute);
 
 router.use("/payment", paymentRoute);
 

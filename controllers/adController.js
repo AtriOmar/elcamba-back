@@ -19,8 +19,8 @@ async function uploadFile(file) {
   const oldPath = file.filepath;
   const ext = file.originalFilename.slice(file.originalFilename.lastIndexOf("."));
   const newName = uuidv4().replaceAll("-", "").toString() + ext;
-  const tempPath = "./public/uploads/temp/ads/" + newName;
-  const newPath = "./public/uploads/ads/" + newName;
+  const tempPath = "./public/uploads/temp/abc/" + newName;
+  const newPath = "./public/uploads/abc/" + newName;
   const metadata = await sharp(oldPath).metadata();
   try {
     if (file.mimetype.endsWith("gif") || file.mimetype.endsWith("svg")) {
@@ -107,14 +107,14 @@ exports.createProductPayment = async function (req, res) {
   const payload = {
     amount: body.amount,
     vendor: 2941,
-    note: "Order 576587",
-    first_name: "Omar",
-    last_name: "Atri",
-    email: "atri.omar.2003@gmail.com",
-    phone: "+21624246962",
-    return_url: "http://localhost:5173",
-    cancel_url: "http://localhost:5173",
-    webhook_url: "http://localhost:5173",
+    note: "Order",
+    first_name: "ELCAMBA",
+    last_name: "ELCAMBA",
+    email: "elcamba@gmail.com",
+    phone: "+21600000000",
+    return_url: process.env.FRONTEND_URL,
+    cancel_url: process.env.FRONTEND_URL,
+    webhook_url: process.env.FRONTEND_URL,
   };
 
   try {
@@ -144,14 +144,14 @@ exports.createProductPayment = async function (req, res) {
 exports.createPosterPayment = async function (req, res) {
   const payload = {
     vendor: 2941,
-    note: "Order 576587",
-    first_name: "Omar",
-    last_name: "Atri",
-    email: "atri.omar.2003@gmail.com",
-    phone: "+21624246962",
-    return_url: "http://localhost:5173",
-    cancel_url: "http://localhost:5173",
-    webhook_url: "http://localhost:5173",
+    note: "Order",
+    first_name: "ELCAMBA",
+    last_name: "ELCAMBA",
+    email: "elcamba@gmail.com",
+    phone: "+21600000000",
+    return_url: process.env.FRONTEND_URL,
+    cancel_url: process.env.FRONTEND_URL,
+    webhook_url: process.env.FRONTEND_URL,
   };
 
   var form = new formidable.IncomingForm({ multiples: true });
@@ -559,7 +559,7 @@ async function deleteById(req, res) {
 
   try {
     const ad = await Ad.findByPk(req.body.id);
-    await fse.remove("./public/uploads/ads/" + ad.photo);
+    await fse.remove("./public/uploads/abc/" + ad.photo);
     await Ad.destroy({
       where: {
         id: req.body.id,

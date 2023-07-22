@@ -23,11 +23,6 @@ exports.create = async function create(req, res) {
 };
 
 exports.getAll = async function getAll(req, res) {
-  if (!req.isAuthenticated() || req.user?.accessId < 3) {
-    res.status(400).send("not authorized");
-    return;
-  }
-
   try {
     const settings = await Setting.findAll({ attributes: ["id", "name", "value", "required"] });
 

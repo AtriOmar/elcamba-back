@@ -13,14 +13,14 @@ router.post("/createProductAd", async (req, res) => {
   const payload = {
     amount,
     vendor: 2941,
-    note: "Order #12",
-    first_name: "Omar",
-    last_name: "Atri",
-    email: "atri.omar.2003@gmail.com",
-    phone: "+21624246962",
-    return_url: "http://localhost:5173",
-    cancel_url: "http://localhost:5173",
-    webhook_url: "http://localhost:5173",
+    note: "Order",
+    first_name: "ELCAMBA",
+    last_name: "ELCAMBA",
+    email: "elcamba@gmail.com",
+    phone: "+21600000000",
+    return_url: process.env.FRONTEND_URL,
+    cancel_url: process.env.FRONTEND_URL,
+    webhook_url: process.env.FRONTEND_URL,
   };
 
   try {

@@ -318,8 +318,11 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
       sold: false,
     };
 
-    if (orderBy === "name") options.order[0][0] = "name";
-    else if (orderBy === "createdAt") options.order[0][0] = "createdAt";
+    if (["createdAt", "price", "name"].includes(orderBy)) {
+      options.order[0][0] = orderBy;
+    } else {
+      options.order[0][0] = "id";
+    }
 
     if (order === "asc") options.order[0][1] = "asc";
     else options.order[0][1] = "desc";

@@ -119,8 +119,10 @@ async function onWatchSingle(socket, userId, toWatch, io) {
       console.log(conversation.toJSON());
       await conversation.save();
     }
-    sendHeader(io, userId, conversation);
-    sendHeader(io, toWatch, conversation);
+    if (conversation) {
+      sendHeader(io, userId, conversation);
+      sendHeader(io, toWatch, conversation);
+    }
 
     // var rooms = socket.adapter.rooms;
     // const room = rooms.get(makeRoom(userId, toWatch));
@@ -162,7 +164,7 @@ async function onUnwatchSingle(socket, userId, toWatch, io) {
 async function sendHeader(io, userId, conversation) {
   const conv = JSON.parse(JSON.stringify(conversation));
 
-  if (conv.Messages?.length) {
+  if (conv?.Messages?.length) {
     conv.Messages = conv.Messages.slice(-1);
   }
 
