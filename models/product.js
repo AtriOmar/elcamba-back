@@ -76,3 +76,21 @@ async function removeUnused() {
 
 // Product.sync({ alter: true });
 module.exports = Product;
+
+const { Op } = require("sequelize");
+
+async function test() {
+  const result = await Product.min("price", {
+    include: {
+      model: SubCategory,
+      where: {
+        CategoryId: 2,
+      },
+    },
+  });
+
+  console.log("-------------------- result --------------------");
+  console.log(result);
+}
+
+test();

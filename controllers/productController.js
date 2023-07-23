@@ -263,7 +263,7 @@ exports.getById = async function getById(req, res) {
 };
 
 exports.getByCategoryId = async function getByCategoryId(req, res) {
-  const { categoryId, subCategoryId, limit = 10, page = 1, min = 0, max = 5000, order, orderBy, delivery, search = "" } = req.query;
+  const { categoryId, subCategoryId, limit = 25, page = 1, min, max, order, orderBy, delivery, search = "" } = req.query;
 
   const filteredCities = req.query.cities === "all" ? "all" : req.query.cities?.split?.("-").map?.((city) => cities[city]);
 
@@ -278,6 +278,8 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
     where: {},
     order: [[]],
   };
+  let minPrice = 0,
+    maxPrice = 0;
   try {
     if (subCategoryId && !isNaN(subCategoryId)) {
       const subRes = await SubCategory.findByPk(subCategoryId, {
@@ -293,6 +295,20 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
       options.where = {
         subCategoryId,
       };
+
+      minPrice = await Product.min("price", {
+        where: {
+          active: 2,
+          subCategoryId,
+        },
+      });
+      maxPrice = await Product.max("price", {
+        where: {
+          active: 2,
+          subCategoryId,
+        },
+      });
+
       console.log("-------------------- subCategoryId --------------------");
       console.log(subCategoryId);
     } else if (categoryId && !isNaN(categoryId)) {
@@ -305,18 +321,57 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
       }
 
       options.include = [{ model: SubCategory, where: { categoryId }, include: Category }];
+
+      minPrice = await Product.min("price", {
+        where: {
+          active: 2,
+        },
+        include: {
+          model: SubCategory,
+          where: {
+            categoryId,
+          },
+        },
+      });
+      maxPrice = await Product.max("price", {
+        where: {
+          active: 2,
+        },
+        include: {
+          model: SubCategory,
+          where: {
+            categoryId,
+          },
+        },
+      });
+
       console.log("-------------------- categoryId --------------------");
       console.log(categoryId);
     }
     options.where = {
       ...options.where,
-      price: {
-        [Op.gte]: !isNaN(min) ? Number(min) : 0,
-        [Op.lte]: !isNaN(max) ? Number(max) : 5000,
-      },
       visible: true,
       sold: false,
+      // price: {
+      //   [Op.gte]: !isNaN(min) ? Number(min) : undefined,
+      //   [Op.lte]: !isNaN(max) ? Number(max) : undefined,
+      // },
     };
+
+    if ((min && !isNaN(min)) || (max && !isNaN(max))) {
+      options.where.price = {};
+
+      if (min && !isNaN(min)) {
+        options.where.price[Op.gte] = Number(min);
+      }
+
+      if (max && !isNaN(max)) {
+        options.where.price[Op.lte] = Number(max);
+      }
+    }
+
+    console.log("-------------------- min, max --------------------");
+    console.log(min, max);
 
     if (["createdAt", "price", "name"].includes(orderBy)) {
       options.order[0][0] = orderBy;
@@ -324,8 +379,8 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
       options.order[0][0] = "id";
     }
 
-    if (order === "asc") options.order[0][1] = "asc";
-    else options.order[0][1] = "desc";
+    if (order === "desc") options.order[0][1] = "desc";
+    else options.order[0][1] = "asc";
 
     if (delivery === "y") {
       options.where.delivery = {
@@ -353,6 +408,8 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
     });
 
     const response = {
+      minPrice,
+      maxPrice,
       products: rows,
       count,
     };
