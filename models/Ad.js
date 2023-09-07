@@ -72,3 +72,12 @@ module.exports = Ad;
 //     where: {},
 //   }
 // );
+
+// Ad.update(
+//   {
+//     expiresAt: new Date("2024-01-10"),
+//   },
+//   {
+//     where: { type: 4 },
+//   }
+// );

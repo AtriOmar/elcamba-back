@@ -12,7 +12,7 @@ router.post("/createProductAd", async (req, res) => {
 
   const payload = {
     amount,
-    vendor: 2941,
+    vendor: process.env.PAYMEE_VENDOR,
     note: "Order",
     first_name: "ELCAMBA",
     last_name: "ELCAMBA",

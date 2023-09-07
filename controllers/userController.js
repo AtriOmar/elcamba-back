@@ -407,7 +407,7 @@ async function sendResetEmail(req, res) {
       from: "Charyoul <charyoul@advanceticsoft.com>",
       to: email,
       subject: "Réintialisation de mot de passe Charyoul",
-      html: emailBody(user.username, `http://localhost:5173/reset-password/${resetToken}`, "1 heure"),
+      html: emailBody(user.username, `${process.env.FRONTEND_URL}/reset-password/${resetToken}`, "1 heure"),
     };
 
     try {

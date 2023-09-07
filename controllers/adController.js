@@ -106,7 +106,7 @@ exports.createProductPayment = async function (req, res) {
 
   const payload = {
     amount: body.amount,
-    vendor: 2941,
+    vendor: process.env.PAYMEE_VENDOR,
     note: "Order",
     first_name: "ELCAMBA",
     last_name: "ELCAMBA",
@@ -143,7 +143,7 @@ exports.createProductPayment = async function (req, res) {
 
 exports.createPosterPayment = async function (req, res) {
   const payload = {
-    vendor: 2941,
+    vendor: process.env.PAYMEE_VENDOR,
     note: "Order",
     first_name: "ELCAMBA",
     last_name: "ELCAMBA",
