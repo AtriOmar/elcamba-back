@@ -1,5 +1,6 @@
 const Category = require("../models/Category");
 const db = require("../models/index");
+const Product = require("../models/Product");
 const SubCategory = require("../models/SubCategory");
 
 async function create(req, res) {
@@ -69,12 +70,50 @@ async function updateById(req, res) {
 }
 
 async function deleteById(req, res) {
-  await SubCategory.destroy({
-    where: {
-      id: req.query.id,
-    },
-  });
-  res.status(200).end();
+  if (!req.isAuthenticated() || req.user?.accessId < 3) {
+    res.status(400).send("not authorized");
+    return;
+  }
+
+  const { id, transferTo } = req.query;
+
+  if (Number(transferTo) === -1) {
+    res.status(200).end();
+    return;
+  }
+
+  try {
+    if (Number(transferTo) === -2) {
+      await Product.destroy({
+        where: {
+          subCategoryId: id,
+        },
+      });
+    }
+
+    if (Number(transferTo) > 0) {
+      await Product.update(
+        {
+          subCategoryId: Number(transferTo),
+        },
+        {
+          where: {
+            subCategoryId: id,
+          },
+        }
+      );
+    }
+
+    await SubCategory.destroy({
+      where: {
+        id,
+      },
+    });
+    res.status(200).end();
+  } catch (err) {
+    res.status(400).send(err);
+    console.log(err);
+  }
 }
 
 module.exports = {

@@ -75,9 +75,9 @@ exports.sendVerificationEmail = async function sendVerificationEmail(req, res) {
     });
 
     const mailOptions = {
-      from: "Charyoul <charyoul@advanceticsoft.com>",
+      from: "ELCAMBA <noreply@elcamba.net>",
       to: email,
-      subject: "Vérification de compte CHARYOUL",
+      subject: "Vérification de compte ELCAMBA",
       html: verificationEmailBody(name || "Mr/Mme,", verificationCode, "1 heure"),
     };
 
@@ -404,9 +404,9 @@ async function sendResetEmail(req, res) {
     });
 
     const mailOptions = {
-      from: "Charyoul <charyoul@advanceticsoft.com>",
+      from: "ELCAMBA <noreply@elcamba.net>",
       to: email,
-      subject: "Réintialisation de mot de passe Charyoul",
+      subject: "Réintialisation de mot de passe ELCAMBA",
       html: emailBody(user.username, `${process.env.FRONTEND_URL}/reset-password/${resetToken}`, "1 heure"),
     };
 
@@ -475,7 +475,7 @@ function emailBody(name, link, expiration) {
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Réinitialisation de votre mot de passe Charyoul</title>
+    <title>Réinitialisation de votre mot de passe ELCAMBA</title>
     <style>
       * {
         box-sizing: border-box;
@@ -501,7 +501,7 @@ function emailBody(name, link, expiration) {
       h2 {
         font-size: 20px;
         font-weight: bold;
-        margin-top: 0;
+        margin-top: 40px;
         margin-bottom: 20px;
       }
       p {
@@ -514,15 +514,15 @@ function emailBody(name, link, expiration) {
       a {
         display:block;
         width:fit-content;
-        color: #a16207 !important;
-        background-color: #fde047;
+        color: #648415 !important;
+        background-color: #a5da24;
         text-decoration: none;
         padding: 10px 20px;
         border-radius: 5px;
         transition: background-color 150ms;
       }
       a:hover {
-        background-color: #facc15;
+        background-color: #97c520;
       }
       .ps {
         font-size: 12px;
@@ -535,17 +535,33 @@ function emailBody(name, link, expiration) {
         border-radius:5px;
         padding:50px 30px;
       }
+      .logo-name{
+      }
+      .logo-icon{
+        margin-left:10px;
+      }
+      .logo-container{
+        display:flex;
+        width:fit-content;
+        margin:auto;
+        height:50px;
+
+      }
     </style>
   </head>
   <body>
     <section class="container"">
-        <h1>CHARYOUL</h1>
+        <div class="logo-container">
+
+            <img src="https://elcamba.net/logo_name.png" alt="ELCAMBA logo name" class="logo-name">
+            <img src="https://elcamba.net/logo_icon.png" alt="ELCAMBA logo icon" class="logo-icon">
+        </div>
         <h2>Réinitialisation de mot de passe</h2>
         <p>Bonjour ${name},</p>
-        <p>Vous avez demandé à réinitialiser votre mot de passe sur Charyoul. Pour accéder à votre compte, veuillez cliquer sur le lien ci-dessous:</p>
+        <p>Vous avez demandé à réinitialiser votre mot de passe sur ELCAMBA. Pour accéder à votre compte, veuillez cliquer sur le lien ci-dessous:</p>
         <p><a href="${link}">Réinitialiser votre mot de passe</a></p>
         <p>Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet email.</p>
-        <p>Cordialement,<br />L'équipe de Charyoul</p>
+        <p>Cordialement,<br />L'équipe de ELCAMBA</p>
         <p class="ps">PS: Ce lien expirera dans ${expiration}. Veuillez le réinitialiser à nouveau si nécessaire.</p>
     </section>
   </body>
@@ -559,7 +575,7 @@ function verificationEmailBody(name, code, expiration) {
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Vérification de compte CHARYOUL</title>
+    <title>Vérification de compte ELCAMBA</title>
     <style>
       * {
         box-sizing: border-box;
@@ -584,7 +600,7 @@ function verificationEmailBody(name, code, expiration) {
       h2 {
         font-size: 20px;
         font-weight: bold;
-        margin-top: 0;
+        margin-top: 40px;
         margin-bottom: 20px;
       }
       p {
@@ -596,15 +612,15 @@ function verificationEmailBody(name, code, expiration) {
       }
       .code {
         width:fit-content;
-        color: #a16207;
-        background-color: #fde047;
+        color: #648415;
+        background-color: #a5da24;
         padding: 10px 20px;
         border-radius: 5px;
         transition: background-color 150ms;
         margin-inline:auto;
       }
       .code:hover {
-        background-color: #facc15;
+        background-color: #97c520;
       }
       .ps {
         font-size: 12px;
@@ -617,17 +633,31 @@ function verificationEmailBody(name, code, expiration) {
         border-radius:5px;
         padding:50px 30px;
       }
+      .logo-icon{
+        margin-left:10px;
+      }
+      .logo-container{
+        display:flex;
+        width:fit-content;
+        margin:auto;
+        height:50px;
+
+      }
     </style>
   </head>
   <body>
     <section class="container"">
-        <h1>CHARYOUL</h1>
-        <h2>Vérification de compte CHARYOUL</h2>
+        <div class="logo-container">
+
+            <img src="https://elcamba.net/logo_name.png" alt="ELCAMBA logo name" class="logo-name">
+            <img src="https://elcamba.net/logo_icon.png" alt="ELCAMBA logo icon" class="logo-icon">
+        </div>
+        <h2>Vérification de compte ELCAMBA</h2>
         <p>Bonjour ${name},</p>
-        <p>Pour compléter la création de votre compte CHARYOUL, voici votre code:</p>
+        <p>Pour compléter la création de votre compte ELCAMBA, voici votre code:</p>
         <p class="code">${code}</p>
         <p>Si vous n'avez pas essayer de créer un compte, veuillez ignorer cet email.</p>
-        <p>Cordialement,<br />L'équipe de CHARYOUL</p>
+        <p>Cordialement,<br />L'équipe de ELCAMBA</p>
     </section>
   </body>
 </html>

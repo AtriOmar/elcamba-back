@@ -82,15 +82,43 @@ async function updateById(req, res) {
 }
 
 async function deleteById(req, res) {
-  if (!req.isAuthenticated) {
+  if (!req.isAuthenticated() || req.user?.accessId < 3) {
     res.status(400).send("not authorized");
     return;
   }
 
+  const { id, transferTo } = req.query;
+
+  if (Number(transferTo) === -1) {
+    res.status(200).end();
+    return;
+  }
+
   try {
+    if (Number(transferTo) === -2) {
+      await SubCategory.destroy({
+        where: {
+          categoryId: id,
+        },
+      });
+    }
+
+    if (Number(transferTo) > 0) {
+      await SubCategory.update(
+        {
+          categoryId: transferTo,
+        },
+        {
+          where: {
+            categoryId: id,
+          },
+        }
+      );
+    }
+
     await Category.destroy({
       where: {
-        id: req.query.id,
+        id,
       },
     });
     res.status(200).end();

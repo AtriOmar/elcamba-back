@@ -41,23 +41,26 @@ exports.create = async function create(req, res) {
 
       // console.log("fields", fields);
       // console.log("files", files);
+      try {
+        const { photos, name, subCategoryId, salePrice, price, description, delivery, city, address } = fields;
+        const data = { photos, name, subCategoryId, salePrice, price, description, delivery, city, address };
 
-      const { photos, name, subCategoryId, salePrice, price, description, delivery, city, address } = fields;
-      const data = { photos, name, subCategoryId, salePrice, price, description, delivery, city, address };
+        const filesArr = Object.values(files);
 
-      const filesArr = Object.values(files);
+        const photosNames = await Promise.all(filesArr.map(uploadFile));
+        console.log(photosNames);
+        data.photos = JSON.stringify(photosNames);
 
-      const photosNames = await Promise.all(filesArr.map(uploadFile));
-      console.log(photosNames);
-      data.photos = JSON.stringify(photosNames);
+        data.userId = req.user.id;
 
-      data.userId = req.user.id;
+        data.price ||= 0;
 
-      data.price ||= 0;
+        const result = await Product.create(data);
 
-      const result = await Product.create(data);
-
-      res.status(200).send(result);
+        res.status(200).send(result);
+      } catch (error) {
+        res.status(400).send(error);
+      }
     });
   } catch (err) {
     res.status(400).send(err);

@@ -105,7 +105,6 @@ async function onWatchSingle(socket, userId, toWatch, io) {
     ]);
 
     if (conversation && conversation.seen !== userId + "" && conversation.seen !== "both") {
-      console.log("-------------------- I have no idea whats going on --------------------");
       if (!conversation.seen) {
         conversation.set({
           seen: userId + "",

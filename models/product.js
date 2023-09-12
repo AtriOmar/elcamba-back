@@ -36,32 +36,32 @@ const Product = db.define(
 const SubCategory = require("./SubCategory");
 const User = require("./User");
 
-SubCategory.hasMany(Product, { foreignKey: "subCategoryId" });
-Product.belongsTo(SubCategory, { foreignKey: "subCategoryId" });
+SubCategory.hasMany(Product, { foreignKey: "subCategoryId", onDelete: "CASCADE", onUpdate: "CASCADE" });
+Product.belongsTo(SubCategory, { foreignKey: "subCategoryId", onDelete: "CASCADE", onUpdate: "CASCADE" });
 
 User.hasMany(Product, { foreignKey: "userId" });
 Product.belongsTo(User, { foreignKey: "userId" });
 
 // Product.sync({ alter: true });
 
-const fse = require("fs-extra");
+// const fse = require("fs-extra");
 
-async function removeUnused() {
-  const dir = await fse.readdir("./public/uploads/");
-  const products = await Product.findAll();
-  const photosArr = [];
-  products.forEach((product) => {
-    photosArr.push(...JSON.parse(product.photos));
-  });
-  console.log(photosArr);
-  const notUsed = dir.filter((file) => file.indexOf(".") > 0 && !photosArr.includes(file));
+// async function removeUnused() {
+//   const dir = await fse.readdir("./public/uploads/");
+//   const products = await Product.findAll();
+//   const photosArr = [];
+//   products.forEach((product) => {
+//     photosArr.push(...JSON.parse(product.photos));
+//   });
+//   console.log(photosArr);
+//   const notUsed = dir.filter((file) => file.indexOf(".") > 0 && !photosArr.includes(file));
 
-  console.log(notUsed);
+//   console.log(notUsed);
 
-  // notUsed.forEach((curr) => {
-  //   fse.remove("./public/uploads/" + curr);
-  // });
-}
+// notUsed.forEach((curr) => {
+//   fse.remove("./public/uploads/" + curr);
+// });
+// }
 
 // removeUnused();
 
@@ -74,23 +74,22 @@ async function removeUnused() {
 //   }
 // );
 
-// Product.sync({ alter: true });
 module.exports = Product;
 
 const { Op } = require("sequelize");
 
-async function test() {
-  const result = await Product.min("price", {
-    include: {
-      model: SubCategory,
-      where: {
-        CategoryId: 2,
-      },
-    },
-  });
+// async function test() {
+//   const result = await Product.min("price", {
+//     include: {
+//       model: SubCategory,
+//       where: {
+//         CategoryId: 2,
+//       },
+//     },
+//   });
 
-  console.log("-------------------- result --------------------");
-  console.log(result);
-}
+//   console.log("-------------------- result --------------------");
+//   console.log(result);
+// }
 
-test();
+// test();
