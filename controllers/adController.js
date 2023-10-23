@@ -9,6 +9,7 @@ const axios = require("axios");
 const db = require("../config/database");
 const { Op } = require("sequelize");
 const sharp = require("sharp");
+const passport = require("passport");
 
 const headers = {
   "Content-type": "application/json",
@@ -200,6 +201,34 @@ exports.createPosterPayment = async function (req, res) {
 };
 
 exports.updateById = async function (req, res) {
+  // console.log("-------------------- updateById --------------------");
+  // await new Promise((resolve, reject) => {
+  //   passport.authenticate("jwt", { session: false }, (err, user) => {
+  //     if (err || !user) {
+  //       console.log("-------------------- user from authenticate update --------------------");
+  //       console.log(user);
+
+  //       return resolve();
+  //     }
+
+  //     console.log("-------------------- user from authenticate update --------------------");
+  //     console.log(user);
+  //     req.logIn(user, function (err) {
+  //       console.log("-------------------- err from authenticate update --------------------");
+  //       console.log(err);
+  //     });
+  //     return resolve();
+  //   })(req, res);
+  // });
+
+  console.log("-------------------- req.user after authenticate update --------------------");
+  console.log(req.user);
+
+  if (!req.isAuthenticated()) {
+    res.status(400).send("not authorized");
+    return;
+  }
+
   const { id, active, paid, url } = req.body;
 
   try {

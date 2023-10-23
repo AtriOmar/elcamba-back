@@ -8,6 +8,7 @@ const Category = require("../models/Category");
 const ProductView = require("../models/ProductView");
 const db = require("../config/database");
 const { Op } = require("sequelize");
+const sharp = require("sharp");
 
 async function uploadFile(file) {
   const oldPath = file.filepath;
@@ -16,6 +17,8 @@ async function uploadFile(file) {
   const newPath = "./public/uploads/" + newName;
   try {
     await fse.move(oldPath, newPath);
+    const compressed = await sharp(newPath).resize(300).toBuffer();
+    await fse.outputFile("./public/uploads/thumbnails/" + newName, compressed);
     console.log(newName);
     return newName;
   } catch (err) {
@@ -266,7 +269,10 @@ exports.getById = async function getById(req, res) {
 };
 
 exports.getByCategoryId = async function getByCategoryId(req, res) {
-  const { categoryId, subCategoryId, limit = 25, page = 1, min, max, order, orderBy, delivery, search = "" } = req.query;
+  console.log("-------------------- req.user from products getALl --------------------");
+  console.log(req.user);
+
+  const { categoryId, subCategoryId, limit = 25, page = 1, min, max, order, orderBy, delivery, search = "", userId } = req.query;
 
   const filteredCities = req.query.cities === "all" ? "all" : req.query.cities?.split?.("-").map?.((city) => cities[city]);
 
@@ -284,7 +290,42 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
   let minPrice = 0,
     maxPrice = 0;
   try {
-    if (subCategoryId && !isNaN(subCategoryId)) {
+    if (userId && !isNaN(userId)) {
+      var user = (await User.findByPk(Number(userId), { attributes: { exclude: ["password"] } })).toJSON();
+
+      const productsCount = await Product.count({
+        where: {
+          userId,
+        },
+      });
+
+      const soldProductsCount = await Product.count({
+        where: {
+          userId,
+          sold: true,
+        },
+      });
+
+      user.productsCount = productsCount;
+
+      user.soldProductsCount = soldProductsCount;
+
+      options.where.userId = Number(userId);
+
+      minPrice = await Product.min("price", {
+        where: {
+          active: 2,
+          userId: Number(userId),
+        },
+      });
+
+      maxPrice = await Product.max("price", {
+        where: {
+          active: 2,
+          userId: Number(userId),
+        },
+      });
+    } else if (subCategoryId && !isNaN(subCategoryId)) {
       const subRes = await SubCategory.findByPk(subCategoryId, {
         include: Category,
       });
@@ -350,7 +391,19 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
 
       console.log("-------------------- categoryId --------------------");
       console.log(categoryId);
+    } else {
+      minPrice = await Product.min("price", {
+        where: {
+          active: 2,
+        },
+      });
+      maxPrice = await Product.max("price", {
+        where: {
+          active: 2,
+        },
+      });
     }
+
     options.where = {
       ...options.where,
       visible: true,
@@ -417,7 +470,9 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
       count,
     };
 
-    if (subCategoryId && !isNaN(subCategoryId)) {
+    if (userId && !isNaN(userId)) {
+      response.user = user;
+    } else if (subCategoryId && !isNaN(subCategoryId)) {
       response.subCategory = subCategory;
       response.category = subCategory.Category;
     } else if (categoryId && !isNaN(categoryId)) {
@@ -587,3 +642,23 @@ const cities = [
   "tunis",
   "zaghouan",
 ];
+
+async function createThumbnails() {
+  try {
+    var dir = await fse.readdir("./public/uploads");
+    console.log(dir);
+    dir.forEach(async (filename) => {
+      const stat = await fse.stat("./public/uploads/" + filename);
+      if (stat.isFile()) {
+        const compressed = await sharp("./public/uploads/" + filename)
+          .resize(300)
+          .toBuffer();
+        await fse.outputFile("./public/uploads/thumbnails/" + filename, compressed);
+      }
+    });
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+// createThumbnails();

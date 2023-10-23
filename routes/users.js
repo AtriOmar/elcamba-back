@@ -1,7 +1,10 @@
 const router = require("express").Router();
+const authenticateJwt = require("../authenticateJwt");
 const userController = require("../controllers/userController");
 
 // Matches with "/api/user"
+
+router.use(authenticateJwt);
 
 router.get("/getAll", userController.getAllUsers);
 

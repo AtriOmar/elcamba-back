@@ -12,6 +12,31 @@ function parseRoom(room) {
   return room.split("-");
 }
 
+const { getMessaging } = require("firebase-admin/messaging");
+async function sendNotification(userId, title, body) {
+  console.log("-------------------- hhzfomdsfsqdm sendNotification --------------------");
+  try {
+    const message = {
+      notification: {
+        title: title,
+        body: body,
+      },
+      token: regTokens[userId],
+    };
+    getMessaging()
+      .send(message)
+      .then((response) => {
+        console.log("Successfully sent message:", response);
+      })
+      .catch((error) => {
+        console.log("-------------------- error sending message --------------------");
+        console.log(error);
+      });
+  } catch (err) {
+    console.log(err);
+  }
+}
+
 async function sendTitles(io, userId) {
   try {
     const result = await Conversation.findAll({
@@ -175,6 +200,8 @@ async function sendHeader(io, userId, conversation) {
 }
 
 async function sendMessage(io, userId, receiver, message) {
+  console.log("-------------------- sending message --------------------");
+
   try {
     var [conversationRes, created] = await Conversation.findOrCreate({
       where: {
@@ -255,6 +282,11 @@ async function sendMessage(io, userId, receiver, message) {
       });
     }
 
+    console.log("-------------------- receiver --------------------");
+    console.log(receiver);
+    const username = conversationRes.toJSON().User1.id == userId ? conversationRes.toJSON().User1.username : conversationRes.toJSON().User2.username;
+    sendNotification(receiver, `Message de '${username}'`, message);
+
     const conversation = conversationRes?.toJSON();
 
     const [result] = await Promise.all([
@@ -298,9 +330,11 @@ async function sendMessage(io, userId, receiver, message) {
 async function attachEvents(io) {
   io.on("connection", async (socket) => {
     console.log("--------------------socket.request.session.passport.user --------------------");
-    const userId = socket.request.session?.passport?.user;
+    const userId = socket.request.user?.id;
     console.log(userId);
     console.log("-------------------- connecting --------------------");
+
+    if (socket.handshake.query.registrationToken) regTokens[userId] = socket.handshake.query.registrationToken;
 
     // console.log("-------------------- socket.request.user --------------------");
     // console.log(socket.request.user);
@@ -328,3 +362,5 @@ async function attachEvents(io) {
 }
 
 module.exports = attachEvents;
+
+const regTokens = {};

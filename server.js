@@ -11,6 +11,8 @@ const attachEvents = require("./controllers/socket");
 const passport = require("passport");
 require("./config/passportConfig")(passport); // pass passport for configuration
 
+require("./config/firebase");
+
 const session = require("express-session");
 const sessionStore = require("./config/promiseConnection");
 
@@ -27,9 +29,10 @@ const sessionMiddleware = session({
 
 const PORT = process.env.PORT;
 const cors = require("cors");
+const authenticateJwt = require("./authenticateJwt");
 var corsOptions = {
   credentials: true,
-  origin: ["http://localhost:3000", process.env.FRONTEND_URL],
+  origin: ["http://localhost", process.env.FRONTEND_URL],
 };
 
 app.use(express.json());
@@ -39,6 +42,7 @@ app.use(cors(corsOptions));
 app.use(sessionMiddleware);
 app.use(passport.initialize());
 app.use(passport.session());
+// app.use(authenticateJwt);
 app.use(routes);
 
 const httpServer = createServer(app);
@@ -53,8 +57,34 @@ const io = new Server(httpServer, {
 const wrap = (middleware) => (socket, next) => middleware(socket.request, {}, next);
 
 io.use(wrap(sessionMiddleware));
-// io.use(wrap(passport.initialize()));
-// io.use(wrap(passport.session()));
+io.use(wrap(passport.initialize()));
+io.use(wrap(passport.session()));
+// io.use(wrap(passport.authenticate(["jwt"])));
+
+io.use((socket, next) => {
+  const token = socket.handshake.query.token;
+  console.log("-------------------- token --------------------");
+  console.log(token);
+
+  if (socket.request.user) return next();
+
+  socket.request.headers.authorization = token;
+
+  console.log("-------------------- socket.request.headers --------------------");
+  console.log(socket.request.headers);
+
+  console.log("-------------------- authenticating --------------------");
+  passport.authenticate("jwt", { session: false }, (err, user) => {
+    if (err || !user) {
+      console.log("-------------------- user --------------------");
+      console.log(user);
+      return next(new Error("Unauthorized"));
+    }
+
+    socket.request.user = user;
+    return next();
+  })(socket.request, socket.request.res, next);
+});
 
 attachEvents(io);
 

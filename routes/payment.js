@@ -1,6 +1,9 @@
 const axios = require("axios");
+const authenticateJwt = require("../authenticateJwt");
 
 const router = require("express").Router();
+
+router.use(authenticateJwt);
 
 const headers = {
   "Content-type": "application/json",

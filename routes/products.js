@@ -1,11 +1,13 @@
 const router = require("express").Router();
+const passport = require("passport");
 const productController = require("../controllers/productController");
+const authenticateJwt = require("../authenticateJwt");
 
-router.post("/create", productController.create);
+router.post("/create", authenticateJwt, productController.create);
 
-router.post("/update", productController.update);
+router.post("/update", authenticateJwt, productController.update);
 
-router.put("/updateById", productController.updateById);
+router.put("/updateById", authenticateJwt, productController.updateById);
 
 router.get("/getAll", productController.getAll);
 
@@ -17,7 +19,7 @@ router.get("/getByCategoryId", productController.getByCategoryId);
 
 router.get("/getRandom", productController.getRandom);
 
-router.delete("/deleteById", productController.deleteById);
+router.delete("/deleteById", authenticateJwt, productController.deleteById);
 
 router.get("/getByUserId", productController.getByUserId);
 

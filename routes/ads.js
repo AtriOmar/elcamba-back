@@ -1,15 +1,17 @@
 const router = require("express").Router();
+const passport = require("passport");
 const adController = require("../controllers/adController");
+const authenticateJwt = require("../authenticateJwt");
 
 router.post("/create", adController.create);
 
-router.post("/createProductAd", adController.createProductAd);
+router.post("/createProductAd", authenticateJwt, adController.createProductAd);
 
-router.post("/createProductPayment", adController.createProductPayment);
+router.post("/createProductPayment", authenticateJwt, adController.createProductPayment);
 
-router.post("/createPosterPayment", adController.createPosterPayment);
+router.post("/createPosterPayment", authenticateJwt, adController.createPosterPayment);
 
-router.put("/updateById", adController.updateById);
+router.put("/updateById", authenticateJwt, adController.updateById);
 
 router.get("/getByToken", adController.getByToken);
 
@@ -31,6 +33,6 @@ router.get("/getByEachType", adController.getByEachType);
 
 router.get("/getLatest", adController.getLatest);
 
-router.delete("/deleteById", adController.deleteById);
+router.delete("/deleteById", authenticateJwt, adController.deleteById);
 
 module.exports = router;

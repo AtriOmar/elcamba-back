@@ -1,4 +1,3 @@
-const db = require("../models/index.js");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
 const User = require("../models/User.js");

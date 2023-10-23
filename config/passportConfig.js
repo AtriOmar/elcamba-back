@@ -1,8 +1,10 @@
-const db = require("../models");
 const bcrypt = require("bcrypt");
 const LocalStrategy = require("passport-local").Strategy;
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const JwtStrategy = require("passport-jwt").Strategy;
+const ExtractJwt = require("passport-jwt").ExtractJwt;
 const User = require("../models/User");
+const jwt = require("jsonwebtoken");
 
 module.exports = (passport) => {
   //  ======================== Passport Session Setup ============================
@@ -71,6 +73,30 @@ module.exports = (passport) => {
   );
 
   passport.use(
+    new JwtStrategy(
+      {
+        jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+        secretOrKey: process.env.MY_SECRET, // Replace with your actual secret key
+      },
+      async (payload, done) => {
+        console.log("-------------------- payload --------------------");
+        console.log(payload);
+        try {
+          const user = (await User.findByPk(payload.sub)).toJSON();
+
+          if (!user) {
+            return done(null, false);
+          }
+
+          return done(null, user);
+        } catch (error) {
+          return done(error);
+        }
+      }
+    )
+  );
+
+  passport.use(
     new GoogleStrategy(
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
@@ -92,6 +118,7 @@ module.exports = (passport) => {
           defaults: defaultUser,
         });
         const user = result[0].toJSON();
+
         cb(null, user);
       }
     )
