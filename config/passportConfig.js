@@ -102,6 +102,7 @@ module.exports = (passport) => {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_SECRET,
         callbackURL: "/login/google/callback",
+        proxy: true,
       },
       async function (accessToken, refreshToken, profile, cb) {
         const defaultUser = {

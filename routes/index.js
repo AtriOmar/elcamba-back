@@ -45,18 +45,35 @@ router.use("/settings", settingsRoute);
 
 const { getMessaging } = require("firebase-admin/messaging");
 const registrationToken =
-  "c2R-krsOSNKQBPef-Z2q-p:APA91bFncVjZ0q0KBlYsQf1VvRqdzHXJzS5PnprMS2mAFGZmp_Dfel3Xv3MhZQZOOcPiAf3jsWjQi1C6NNReW_apxsnQ0YPjn3qT_Lb2_sQ5ogzjvL1lW0kQHuFJjuAFR8DalwkdJBPd";
+  "c3dgO9e2TIWBqsH5xFNiXL:APA91bFpOoygxwNKGGy39SpavS2vvYEQnQ5rh4-IrgKbmfeYa1QyOtBovkfsHTpt4Li_WS4XrO4kQPfi3RDUC2l6zrQrmuoMHHxeo-H91NcAwBXau7sSW0MfCOuZchjunOrrqoBC75dA";
 const axios = require("axios");
 router.get("/message", async (req, res) => {
+  const messaging = getMessaging();
   try {
     const message = {
       notification: {
         title: "This notification is for ahmed atri!",
-        body: "You have a new message from Bard.",
+        body: "You have a new message.",
+      },
+      android: {
+        notification: {
+          imageUrl: "https://back.elcamba.net/uploads/thumbnails/98cb71b64122420eb0e936afb59c9551.jpg",
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            "mutable-content": 1,
+          },
+        },
+        // fcm_options: {
+        //   image: "https://back.elcamba.net/uploads/thumbnails/d096ef6b34824633acab97fedcf45cf0.png",
+        // },
       },
       token: registrationToken,
     };
-    getMessaging()
+    // getMessaging()
+    messaging
       .send(message)
       .then((response) => {
         console.log("Successfully sent message:", response);

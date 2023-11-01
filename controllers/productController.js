@@ -247,7 +247,7 @@ exports.getById = async function getById(req, res) {
 
     result && (result.photos = JSON.parse(result.photos));
 
-    if (req.user && req.query.view === "true") {
+    if (req.user && req.query.view === "true" && result) {
       console.log("-------------------- finding or creating a new view --------------------");
       const a = await ProductView.findOrCreate({
         where: {
@@ -269,10 +269,10 @@ exports.getById = async function getById(req, res) {
 };
 
 exports.getByCategoryId = async function getByCategoryId(req, res) {
-  console.log("-------------------- req.user from products getALl --------------------");
+  console.log("-------------------- req.user from products getByCategoryId --------------------");
   console.log(req.user);
 
-  const { categoryId, subCategoryId, limit = 25, page = 1, min, max, order, orderBy, delivery, search = "", userId } = req.query;
+  const { categoryId, subCategoryId, limit = 25, page = 1, min, max, order, orderBy, delivery, search = "", userId, active = 2 } = req.query;
 
   const filteredCities = req.query.cities === "all" ? "all" : req.query.cities?.split?.("-").map?.((city) => cities[city]);
 
@@ -284,7 +284,12 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
   // --------------------------------------------
   // --------------------------------------------
   const options = {
-    where: {},
+    attributes: {
+      include: [[db.literal(`CASE WHEN salePrice = 0 THEN price ELSE salePrice END`), "priceWithSale"]],
+    },
+    where: {
+      active,
+    },
     order: [[]],
   };
   let minPrice = 0,
@@ -295,6 +300,7 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
 
       const productsCount = await Product.count({
         where: {
+          active: 2,
           userId,
         },
       });
@@ -302,6 +308,7 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
       const soldProductsCount = await Product.count({
         where: {
           userId,
+          active: 2,
           sold: true,
         },
       });
@@ -312,16 +319,20 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
 
       options.where.userId = Number(userId);
 
-      minPrice = await Product.min("price", {
-        where: {
-          active: 2,
-          userId: Number(userId),
-        },
-      });
+      minPrice = (
+        await Product.findOne({
+          attributes: [[db.literal(`MIN(CASE WHEN salePrice = 0 THEN price ELSE LEAST(price, salePrice) END)`), "minPrice"]],
+          where: {
+            active,
+            userId: Number(userId),
+          },
+          raw: true,
+        })
+      ).minPrice;
 
       maxPrice = await Product.max("price", {
         where: {
-          active: 2,
+          active,
           userId: Number(userId),
         },
       });
@@ -340,15 +351,19 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
         subCategoryId,
       };
 
-      minPrice = await Product.min("price", {
-        where: {
-          active: 2,
-          subCategoryId,
-        },
-      });
+      minPrice = (
+        await Product.findOne({
+          attributes: [[db.literal(`MIN(CASE WHEN salePrice = 0 THEN price ELSE LEAST(price, salePrice) END)`), "minPrice"]],
+          where: {
+            active,
+            subCategoryId,
+          },
+          raw: true,
+        })
+      ).minPrice;
       maxPrice = await Product.max("price", {
         where: {
-          active: 2,
+          active,
           subCategoryId,
         },
       });
@@ -366,20 +381,24 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
 
       options.include = [{ model: SubCategory, where: { categoryId }, include: Category }];
 
-      minPrice = await Product.min("price", {
-        where: {
-          active: 2,
-        },
-        include: {
-          model: SubCategory,
+      minPrice = (
+        await Product.findOne({
+          attributes: [[db.literal(`MIN(CASE WHEN salePrice = 0 THEN price ELSE LEAST(price, salePrice) END)`), "minPrice"]],
           where: {
-            categoryId,
+            active,
           },
-        },
-      });
+          include: {
+            model: SubCategory,
+            where: {
+              categoryId,
+            },
+          },
+          raw: true,
+        })
+      ).minPrice;
       maxPrice = await Product.max("price", {
         where: {
-          active: 2,
+          active,
         },
         include: {
           model: SubCategory,
@@ -392,17 +411,33 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
       console.log("-------------------- categoryId --------------------");
       console.log(categoryId);
     } else {
-      minPrice = await Product.min("price", {
-        where: {
-          active: 2,
-        },
-      });
+      minPrice = (
+        await Product.findOne({
+          attributes: [[db.literal(`MIN(CASE WHEN salePrice = 0 THEN price ELSE LEAST(price, salePrice) END)`), "minPrice"]],
+          where: {
+            active,
+          },
+          raw: true,
+        })
+      ).minPrice;
       maxPrice = await Product.max("price", {
         where: {
-          active: 2,
+          active,
         },
       });
     }
+
+    // const minVar = (
+    //   await Product.findOne({
+    //     attributes: [[db.literal(`MIN(CASE WHEN salePrice = 0 THEN price ELSE LEAST(price, salePrice) END)`), "minPrice"]],
+    //     where: {
+    //       subCategoryId: 7,
+    //     },
+    //   })
+    // ).toJSON();
+
+    // console.log("-------------------- minVar --------------------");
+    // console.log(minVar);
 
     options.where = {
       ...options.where,
@@ -430,7 +465,7 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
     console.log(min, max);
 
     if (["createdAt", "price", "name"].includes(orderBy)) {
-      options.order[0][0] = orderBy;
+      options.order[0][0] = orderBy === "price" ? "priceWithSale" : orderBy;
     } else {
       options.order[0][0] = "id";
     }
