@@ -13,8 +13,6 @@ yarn-error.log*
 
 public/
 
-server.js
-
 # Runtime data
 pids
 *.pid
