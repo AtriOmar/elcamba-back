@@ -88,25 +88,47 @@ router.get("/message", async (req, res) => {
   res.end("Good");
 });
 
-router.get("/test", async (req, res) => {
-  console.log("-------------------- req.rawHeaders --------------------");
-  console.log(req.rawHeaders);
+router.get("/create-payment", async (req, res) => {
+  console.log(process.env.KONNECT_API_KEY);
 
-  // res.send(req);
-  res.send(req.rawHeaders);
+  try {
+    const data = {
+      receiverWalletId: process.env.WALLET_ID,
+      token: "TND",
+      amount: 10000,
+      type: "immediate",
+      description: "payment description",
+      acceptedPaymentMethods: ["wallet", "bank_card", "e-DINAR"],
+      lifespan: 10,
+      checkoutForm: true,
+      // "addPaymentFeesToAmount": true,
+      firstName: "John",
+      lastName: "Doe",
+      phoneNumber: "22777777",
+      email: "john.doe@gmail.com",
+      orderId: "1234657",
+      webhook: process.env.FRONTEND_URL + "/api/notification_payment",
+      // "silentWebhook": true,
+      // "successUrl": "https://dev.konnect.network/gateway/payment-success",
+      // "failUrl": "https://dev.konnect.network/gateway/payment-failure",
+      theme: "light",
+    };
+
+    const result = await axios.post("https://api.preprod.konnect.network/api/v2/payments/init-payment", data, {
+      headers: {
+        "x-api-key": process.env.KONNECT_API_KEY,
+      },
+    });
+
+    res.json(result.data);
+  } catch (err) {
+    res.send(err);
+    console.log(err);
+  }
 });
 
-router.get("/verify", async (req, res) => {
-  const email = req.query.email || "atri.omar.2003@gmail.com";
-  try {
-    const result = await validate(email);
-
-    result.email = email;
-
-    res.send(result);
-  } catch (err) {
-    res.status(400).send(JSON.stringify(err));
-  }
+router.all("/success", (req, res) => {
+  res.send("success");
 });
 
 // =========== SEND REACT PRODUCTION BUILD ====================

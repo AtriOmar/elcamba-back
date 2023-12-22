@@ -6,6 +6,7 @@ const ProductView = db.define(
   "ProductView",
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    fingerprint: { type: DataTypes.TEXT },
   },
   {
     tableName: "product-views",

@@ -20,6 +20,7 @@ const sessionMiddleware = session({
   secret: process.env.MY_SECRET,
   store: sessionStore,
   resave: false,
+
   saveUninitialized: false,
   cookie: {
     maxAge: 3600000 * 24 * 30, // 3600000 1 hour in milliseconds. The expiration time of the cookie to set it as a persistent cookie.
@@ -32,7 +33,7 @@ const cors = require("cors");
 const authenticateJwt = require("./authenticateJwt");
 var corsOptions = {
   credentials: true,
-  origin: ["http://localhost", process.env.FRONTEND_URL],
+  origin: ["http://localhost", "http://localhost:5173", process.env.FRONTEND_URL],
 };
 
 app.use(express.json());
@@ -54,6 +55,25 @@ const io = new Server(httpServer, {
   },
 });
 
+const clients = new Set();
+
+const connectionsSocket = io.of("/connections");
+
+connectionsSocket.on("connection", (socket) => {
+  clients.add(socket.handshake.query.id);
+  socket.join(socket.handshake.query.id);
+  connectionsSocket.emit("clientsCount", clients.size);
+
+  socket.on("getClientsCount", () => {
+    connectionsSocket.emit("clientsCount", clients.size);
+  });
+
+  socket.on("disconnect", () => {
+    if (!connectionsSocket.adapter.rooms.has(socket.handshake.query.id)) clients.delete(socket.handshake.query.id);
+    connectionsSocket.emit("clientsCount", clients.size);
+  });
+});
+
 const wrap = (middleware) => (socket, next) => middleware(socket.request, {}, next);
 
 io.use(wrap(sessionMiddleware));
@@ -65,6 +85,9 @@ io.use((socket, next) => {
   const token = socket.handshake.query.token;
   console.log("-------------------- token --------------------");
   console.log(token);
+
+  console.log("-------------------- socket.hadshake.query --------------------");
+  console.log(socket.handshake.query);
 
   if (socket.request.user) return next();
 

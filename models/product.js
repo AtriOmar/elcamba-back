@@ -58,9 +58,9 @@ Product.belongsTo(User, { foreignKey: "userId" });
 
 //   console.log(notUsed);
 
-// notUsed.forEach((curr) => {
-//   fse.remove("./public/uploads/" + curr);
-// });
+//   notUsed.forEach((curr) => {
+//     fse.remove("./public/uploads/" + curr);
+//   });
 // }
 
 // removeUnused();

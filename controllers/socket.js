@@ -12,26 +12,72 @@ function parseRoom(room) {
   return room.split("-");
 }
 
+const OneSignal = require("onesignal-node");
+
+const client = new OneSignal.Client(process.env.ONESIGNAL_APP_ID, process.env.ONESIGNAL_API_KEY);
+
 const { getMessaging } = require("firebase-admin/messaging");
-async function sendNotification(userId, title, body) {
+async function sendNotification(userId, title, body, data, picture) {
   console.log("-------------------- hhzfomdsfsqdm sendNotification --------------------");
   try {
-    const message = {
-      notification: {
-        title: title,
-        body: body,
+    const user = await User.findByPk(userId, {
+      attributes: ["id", "regTokens"],
+    });
+    const regTokens = JSON.parse(user.regTokens);
+    if (!regTokens?.length) return;
+
+    const notification = {
+      headings: { en: title },
+      contents: {
+        en: body,
       },
-      token: regTokens[userId],
+      // big_picture: "https://elcamba.net/logo_icon.png",
+      large_icon: picture ? "https://back.elcamba.net/uploads/profile-pictures/" + picture : undefined,
+      url: `elcamba://customer/chat/${data.receiver}`,
+      // buttons: [
+      //   { id: "id1", text: "first button", icon: "ic_menu_share" },
+      //   { id: "id2", text: "second button", icon: "ic_menu_send" },
+      // ],
+      existing_android_channel_id: "1c08ee5c-a49f-4843-81d9-d2a1c36a865f",
+      android_channel_id: "1c08ee5c-a49f-4843-81d9-d2a1c36a865f",
+      android_group: "message",
+      include_subscription_ids: regTokens,
     };
-    getMessaging()
-      .send(message)
-      .then((response) => {
-        console.log("Successfully sent message:", response);
-      })
-      .catch((error) => {
-        console.log("-------------------- error sending message --------------------");
-        console.log(error);
-      });
+
+    client.createNotification(notification);
+
+    // const message = {
+    //   notification: {
+    //     title: title,
+    //     body: body,
+    //   },
+    //   data: data,
+    //   tokens: regTokens,
+    // };
+    // const messages = [];
+    // regTokens.forEach((token) => {
+    //   messages.push({
+    //     notification: {
+    //       title: title,
+    //       body: body,
+    //     },
+    //     data: data,
+    //     token: token,
+    //   });
+    //   console.log("-------------------- token fjksmldf --------------------");
+    //   console.log(token);
+    // });
+    // messages.forEach((message) => {
+    //   getMessaging()
+    //     .send(message)
+    //     .then((response) => {
+    //       console.log("Successfully sent message:", response);
+    //     })
+    //     .catch((error) => {
+    //       console.log("-------------------- error sending message --------------------");
+    //       console.log(error);
+    //     });
+    // });
   } catch (err) {
     console.log(err);
   }
@@ -73,12 +119,17 @@ async function sendTitles(io, userId) {
         },
       ],
     });
-    // console.log("-------------------- sending to  --------------------");
-    // console.log(userId);
-    io.to(userId).emit(
-      "conversations",
-      result.map((curr) => curr.toJSON())
-    );
+    if (userId === 0) {
+      io.to(userId).emit(
+        "supportConversations",
+        result.map((curr) => curr.toJSON())
+      );
+    } else {
+      io.to(userId).emit(
+        "conversations",
+        result.map((curr) => curr.toJSON())
+      );
+    }
     // console.log("-------------------- sendTitles result.toJSON() --------------------");
     // console.log(result.map((curr) => curr.toJSON()));
   } catch (err) {
@@ -87,7 +138,7 @@ async function sendTitles(io, userId) {
 }
 
 async function onWatchSingle(socket, userId, toWatch, io) {
-  if (!userId) {
+  if (userId === undefined || userId === null) {
     console.log("-------------------- userId --------------------");
     console.log(userId);
     return;
@@ -139,8 +190,8 @@ async function onWatchSingle(socket, userId, toWatch, io) {
           seen: "both",
         });
       }
-      console.log("-------------------- conversation.toJSON() --------------------");
-      console.log(conversation.toJSON());
+      // console.log("-------------------- conversation.toJSON() --------------------");
+      // console.log(conversation.toJSON());
       await conversation.save();
     }
     if (conversation) {
@@ -154,7 +205,8 @@ async function onWatchSingle(socket, userId, toWatch, io) {
     // console.log("-------------------- room --------------------");
     // console.log(rooms);
 
-    socket.emit("messages", { user, conversation });
+    if (userId === 0) socket.emit("supportMessages", { user, conversation });
+    else socket.emit("messages", { user, conversation });
 
     if (!user) {
       return;
@@ -170,7 +222,7 @@ async function onWatchSingle(socket, userId, toWatch, io) {
 }
 
 async function onUnwatchSingle(socket, userId, toWatch, io) {
-  if (!userId) {
+  if (userId === undefined || userId === null) {
     console.log("-------------------- userId --------------------");
     console.log(userId);
     return;
@@ -189,14 +241,26 @@ async function sendHeader(io, userId, conversation) {
   const conv = JSON.parse(JSON.stringify(conversation));
 
   if (conv?.Messages?.length) {
-    conv.Messages = conv.Messages.slice(-1);
+    conv.Messages = conv.Messages.slice(0, 1);
   }
 
   try {
-    io.to(userId).emit("conversation", conv);
+    if (userId === 0) io.to(userId).emit("supportConversation", conv);
+    else io.to(userId).emit("conversation", conv);
   } catch (err) {
     console.log("sendTitles", err);
   }
+}
+
+function haveCommon(set1, set2) {
+  if (!set1 || !set2) return false;
+
+  for (let elem of set1) {
+    if (set2.has(elem)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 async function sendMessage(io, userId, receiver, message) {
@@ -217,7 +281,7 @@ async function sendMessage(io, userId, receiver, message) {
         ],
       },
       include: [
-        { model: Message, order: [["createdAt", "desc"]], limit: 1 },
+        // { model: Message, order: [["createdAt", "DESC"]], limit: 1 },
         {
           model: User,
           as: "User1",
@@ -251,7 +315,7 @@ async function sendMessage(io, userId, receiver, message) {
           ],
         },
         include: [
-          { model: Message, order: [["createdAt", "desc"]], limit: 1 },
+          // { model: Message, order: [["createdAt", "desc"]], limit: 1 },
           {
             model: User,
             as: "User1",
@@ -272,7 +336,11 @@ async function sendMessage(io, userId, receiver, message) {
     console.log("-------------------- room --------------------");
     console.log(clients);
 
-    if (clients?.size === 2) {
+    // Checking if the receiver is connected (there is a socket in the room with the receiver's id) and that socket
+    // is connected to the current conversation (one of the sockets is in the room of the conversation)
+
+    if (haveCommon(io.sockets.adapter.rooms.get(receiver), clients)) {
+      console.log("yes", io.sockets.adapter.rooms.get(receiver), clients);
       conversationRes.set({
         seen: "both",
       });
@@ -285,7 +353,8 @@ async function sendMessage(io, userId, receiver, message) {
     console.log("-------------------- receiver --------------------");
     console.log(receiver);
     const username = conversationRes.toJSON().User1.id == userId ? conversationRes.toJSON().User1.username : conversationRes.toJSON().User2.username;
-    sendNotification(receiver, `Message de '${username}'`, message);
+    const picture = conversationRes.toJSON().User1.id == userId ? conversationRes.toJSON().User1.picture : conversationRes.toJSON().User2.picture;
+    sendNotification(receiver, `Message de ${username}`, message, { receiver: userId.toString() }, picture);
 
     const conversation = conversationRes?.toJSON();
 
@@ -298,7 +367,7 @@ async function sendMessage(io, userId, receiver, message) {
       conversationRes.save(),
     ]);
 
-    if (!conversation.Messages) conversation.Messages = [];
+    conversation.Messages = [];
 
     conversation.Messages.push(result.toJSON());
 
@@ -314,8 +383,10 @@ async function sendMessage(io, userId, receiver, message) {
     // io.to(makeRoom(userId, receiver)).emit("messages", { conversation });
     if (created) {
       console.log("sending this conversation", conversation);
+      if (userId === 0) io.to(makeRoom(userId, receiver)).emit("supportMessages", { conversation });
       io.to(makeRoom(userId, receiver)).emit("messages", { conversation });
     } else {
+      io.to(makeRoom(userId, receiver)).emit("supportMessage", conversation.Messages?.at(-1));
       io.to(makeRoom(userId, receiver)).emit("message", conversation.Messages?.at(-1));
     }
   } catch (err) {
@@ -323,18 +394,32 @@ async function sendMessage(io, userId, receiver, message) {
   }
 }
 
-// Conversation.destroy({
-//   where: {},
-// });
-
 async function attachEvents(io) {
   io.on("connection", async (socket) => {
     console.log("--------------------socket.request.session.passport.user --------------------");
+    const user = socket.request.user;
     const userId = socket.request.user?.id;
     console.log(userId);
     console.log("-------------------- connecting --------------------");
 
-    if (socket.handshake.query.registrationToken) regTokens[userId] = socket.handshake.query.registrationToken;
+    const registrationToken = socket.handshake.query.registrationToken;
+    const oldRegTokens = JSON.parse(user.regTokens);
+
+    console.log("registration token", registrationToken);
+    if (registrationToken && registrationToken !== "null" && !oldRegTokens.includes(registrationToken)) {
+      const newRegTokens = [...oldRegTokens, socket.handshake.query.registrationToken];
+      await User.update(
+        {
+          regTokens: JSON.stringify(newRegTokens),
+        },
+        {
+          where: {
+            id: userId,
+          },
+        }
+      );
+      // regTokens[userId] = socket.handshake.query.registrationToken;
+    }
 
     // console.log("-------------------- socket.request.user --------------------");
     // console.log(socket.request.user);
@@ -357,10 +442,27 @@ async function attachEvents(io) {
       sendMessage(io, userId, receiver, message);
     });
 
+    if (user.accessId >= 2) {
+      socket.on("joinSupport", () => {
+        console.log("-------------------- joining support --------------------");
+        socket.join(0);
+        sendTitles(io, 0);
+      });
+      socket.on("supportWatchSingle", (toWatch, limit) => {
+        socket.data.limit = limit;
+        onWatchSingle(socket, 0, toWatch, io);
+      });
+      socket.on("supportUnwatchSingle", (toWatch) => {
+        onUnwatchSingle(socket, 0, toWatch, io);
+      });
+      socket.on("supportMessage", ({ receiver, message }) => {
+        console.log(receiver, message);
+        sendMessage(io, 0, receiver, message);
+      });
+    }
+
     socket.on("disconnect", () => console.log("------------------------ disconnecting"));
   });
 }
 
 module.exports = attachEvents;
-
-const regTokens = {};

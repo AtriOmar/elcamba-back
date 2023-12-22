@@ -118,12 +118,39 @@ exports.createProductPayment = async function (req, res) {
     webhook_url: process.env.FRONTEND_URL,
   };
 
+  const data = {
+    receiverWalletId: process.env.WALLET_ID,
+    token: "TND",
+    type: "immediate",
+    description: "Paiement de prix d'annonce",
+    acceptedPaymentMethods: ["wallet", "bank_card", "e-DINAR"],
+    lifespan: 60,
+    amount: Number(body.amount) * 1000,
+    checkoutForm: true,
+    // "addPaymentFeesToAmount": true,
+    // firstName: "ELCAMBA",
+    // lastName: "ELCAMBA",
+    // phoneNumber: "00000000",
+    // email: "elcamba.net.0@gmail.com",
+    // orderId: "1234657",
+    // webhook: process.env.FRONTEND_URL + "/payment-done/webhook",
+    // silentWebhook: true,
+    successUrl: process.env.FRONTEND_URL + "/payment-done/success",
+    failUrl: process.env.FRONTEND_URL + "/payment-done/fail",
+    theme: "light",
+  };
+
   try {
-    const result = await axios.post("https://sandbox.paymee.tn/api/v1/payments/create", payload, { headers });
+    // const result = await axios.post("https://sandbox.paymee.tn/api/v1/payments/create", payload, { headers });
+    paymentRes = await axios.post("https://api.preprod.konnect.network/api/v2/payments/init-payment", data, {
+      headers: {
+        "x-api-key": process.env.KONNECT_API_KEY,
+      },
+    });
 
     // const expiresAt = new Date(Date.now() + Number(body.duration) * 24 * 3600 * 1000);
     const ad = {
-      token: result.data.data.token,
+      token: paymentRes.data.paymentRef,
       type: 0,
       userId: req.user.id,
       productId: body.productId,
@@ -135,7 +162,7 @@ exports.createProductPayment = async function (req, res) {
     const adRes = await Ad.create(ad);
     console.log("ad res", adRes.toJSON());
 
-    res.send(result.data.data.token);
+    res.send(paymentRes.data.paymentRef);
   } catch (err) {
     console.log(err);
     res.status(400).send(err);
@@ -155,6 +182,27 @@ exports.createPosterPayment = async function (req, res) {
     webhook_url: process.env.FRONTEND_URL,
   };
 
+  const data = {
+    receiverWalletId: process.env.WALLET_ID,
+    token: "TND",
+    type: "immediate",
+    description: "Paiement de prix d'annonce",
+    acceptedPaymentMethods: ["wallet", "bank_card", "e-DINAR"],
+    lifespan: 60,
+    checkoutForm: true,
+    // "addPaymentFeesToAmount": true,
+    // firstName: "ELCAMBA",
+    // lastName: "ELCAMBA",
+    // phoneNumber: "00000000",
+    // email: "elcamba.net.0@gmail.com",
+    // orderId: "1234657",
+    // webhook: process.env.FRONTEND_URL + "/payment-done/webhook",
+    // silentWebhook: true,
+    successUrl: process.env.FRONTEND_URL + "/payment-done/success",
+    failUrl: process.env.FRONTEND_URL + "/payment-done/fail",
+    theme: "light",
+  };
+
   var form = new formidable.IncomingForm({ multiples: true });
 
   form.parse(req, async function (err, fields, files) {
@@ -168,8 +216,14 @@ exports.createPosterPayment = async function (req, res) {
       // console.log("files", files);
 
       payload.amount = fields.amount;
+      data.amount = fields.amount * 1000;
       let paymentRes;
-      paymentRes = await axios.post("https://sandbox.paymee.tn/api/v1/payments/create", payload, { headers });
+      // paymentRes = await axios.post("https://sandbox.paymee.tn/api/v1/payments/create", payload, { headers });
+      paymentRes = await axios.post("https://api.preprod.konnect.network/api/v2/payments/init-payment", data, {
+        headers: {
+          "x-api-key": process.env.KONNECT_API_KEY,
+        },
+      });
 
       const photo = files.photo;
 
@@ -179,7 +233,8 @@ exports.createPosterPayment = async function (req, res) {
       const photoName = await uploadFile(photo);
 
       const ad = {
-        token: paymentRes.data.data.token,
+        // token: paymentRes.data.data.token,
+        token: paymentRes.data.paymentRef,
         type: fields.type,
         userId: req.user.id,
         duration: fields.duration,
@@ -192,7 +247,7 @@ exports.createPosterPayment = async function (req, res) {
       const adRes = await Ad.create(ad);
       console.log("ad res", adRes.toJSON());
 
-      res.send(paymentRes.data.data.token);
+      res.send(paymentRes.data.paymentRef);
     } catch (error) {
       console.log(error);
       res.status(400).send(error);
@@ -286,6 +341,8 @@ exports.getByToken = async function (req, res) {
     const ad = adRes?.toJSON();
     if (ad?.Product?.photos) ad.Product.photos = JSON.parse(ad?.Product?.photos);
 
+    ad.paymentUrl = "https://gateway.sandbox.konnect.network/pay?payment_ref=" + ad.token;
+
     res.send(ad);
   } catch (err) {
     console.log(err);
@@ -320,9 +377,10 @@ exports.pay = async function (req, res) {
       })
     ).toJSON();
 
-    const result = await axios.get(`https://sandbox.paymee.tn/api/v1/payments/${token}/check`, { headers });
-    console.log("payment check", result.data);
-    const status = result.data.data.payment_status;
+    // const result = await axios.get(`https://sandbox.paymee.tn/api/v1/payments/${token}/check`, { headers });
+    const result = await axios.get(`https://api.preprod.konnect.network/api/v2/payments/${token}`, { headers });
+    console.log("payment check", JSON.stringify(result.data, null, 2));
+    const status = result.data.payment.status === "completed";
     if (status) {
       const newData = {
         paid: new Date(),
@@ -434,7 +492,7 @@ async function getAll(req, res) {
     options.where.type = 0;
   } else if (type === "poster") {
     options.where.type = { [Op.ne]: 0 };
-  } else if (type && Number(type) > 0 && Number(type) <= 4) {
+  } else if (type && Number(type) >= 0 && Number(type) <= 4) {
     options.where.type = Number(type);
   }
 
@@ -453,7 +511,9 @@ async function getAll(req, res) {
     options.where[Op.or] = [{ active: { [Op.ne]: 2 } }, { expiresAt: { [Op.lt]: Date.now() } }];
   }
 
-  if (orderBy) {
+  if (orderBy === "random") {
+    options.order = db.random();
+  } else if (orderBy) {
     options.order = [[]];
     if (["createdAt", "expiresAt"].includes(orderBy)) {
       options.order[0][0] = orderBy;
@@ -484,17 +544,22 @@ async function getAll(req, res) {
 }
 
 async function getById(req, res) {
-  const result = await Ad.findByPk(req.query.id, {
-    include: [
-      { model: Product, attributes: ["name", "photos"] },
-      { model: User, exclude: ["password"] },
-    ],
-  });
-  const ad = result?.toJSON?.();
-  if (result.Product) {
-    result.Product.photos = JSON.parse(ad.Product.photos);
+  try {
+    const result = await Ad.findByPk(req.query.id, {
+      include: [
+        { model: Product, attributes: ["name", "photos"] },
+        { model: User, exclude: ["password"] },
+      ],
+    });
+    const ad = result?.toJSON?.();
+    if (result?.Product) {
+      result.Product.photos = JSON.parse(ad.Product.photos);
+    }
+    res.status(200).send(result);
+  } catch (err) {
+    console.log(err);
+    res.status(400).send(err);
   }
-  res.status(200).send(result);
 }
 
 async function getByType(req, res) {

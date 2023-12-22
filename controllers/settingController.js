@@ -66,7 +66,7 @@ exports.update = async function update(req, res) {
     );
 
     const newSetting = await Setting.findByPk(id, {
-      attributes: ["id", "name", "value"],
+      attributes: ["id", "name", "value", "required"],
     });
 
     res.send(newSetting);
@@ -76,7 +76,17 @@ exports.update = async function update(req, res) {
 };
 
 exports.deleteById = async function (req, res) {
+  if (!req.isAuthenticated() || req.user?.accessId < 3) {
+    res.status(400).send("not authorized");
+    return;
+  }
+
   const { id } = req.query;
+
+  if (1 >= Number(id) <= 4) {
+    res.status(400).send("required");
+    return;
+  }
 
   try {
     await Setting.destroy({

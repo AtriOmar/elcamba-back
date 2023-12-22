@@ -17,6 +17,7 @@ const User = db.define(
     phone: DataTypes.TEXT,
     resetToken: DataTypes.TEXT,
     resetTokenExpires: DataTypes.DATE,
+    regTokens: { type: DataTypes.TEXT, defaultValue: "[]" },
   },
   {
     tableName: "users",

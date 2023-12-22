@@ -9,6 +9,7 @@ const ProductView = require("../models/ProductView");
 const db = require("../config/database");
 const { Op } = require("sequelize");
 const sharp = require("sharp");
+const CryptoJS = require("crypto-js");
 
 async function uploadFile(file) {
   const oldPath = file.filepath;
@@ -227,6 +228,8 @@ exports.getAll = async function getAll(req, res) {
 };
 
 exports.getById = async function getById(req, res) {
+  const { fingerprintToken } = req.query;
+
   try {
     const result = await Product.findByPk(req.query.id, {
       attributes: {
@@ -247,6 +250,11 @@ exports.getById = async function getById(req, res) {
 
     result && (result.photos = JSON.parse(result.photos));
 
+    if (req.query.view === "true" && !req.isAuthenticated() && fingerprintToken) {
+      var bytes = CryptoJS.AES.decrypt(fingerprintToken, process.env.FINGERPRINT_PASSWORD);
+      var fingerprint = bytes.toString(CryptoJS.enc.Utf8);
+    }
+
     if (req.user && req.query.view === "true" && result) {
       console.log("-------------------- finding or creating a new view --------------------");
       const a = await ProductView.findOrCreate({
@@ -257,6 +265,20 @@ exports.getById = async function getById(req, res) {
         defaults: {
           userId: req.user.id,
           productId: req.query.id,
+        },
+      });
+    } else if (!req.user && req.query.view === "true" && fingerprintToken) {
+      console.log("-------------------- saving fingerprint --------------------");
+      var bytes = CryptoJS.AES.decrypt(fingerprintToken, process.env.FINGERPRINT_PASSWORD);
+      var fingerprint = bytes.toString(CryptoJS.enc.Utf8);
+      const a = await ProductView.findOrCreate({
+        where: {
+          productId: req.query.id,
+          fingerprint,
+        },
+        defaults: {
+          productId: req.query.id,
+          fingerprint,
         },
       });
     }
@@ -272,7 +294,7 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
   console.log("-------------------- req.user from products getByCategoryId --------------------");
   console.log(req.user);
 
-  const { categoryId, subCategoryId, limit = 25, page = 1, min, max, order, orderBy, delivery, search = "", userId, active = 2 } = req.query;
+  const { categoryId, subCategoryId, limit = 25, page = 1, min, max, order, orderBy, delivery, search = "", userId, active, sold } = req.query;
 
   const filteredCities = req.query.cities === "all" ? "all" : req.query.cities?.split?.("-").map?.((city) => cities[city]);
 
@@ -287,9 +309,7 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
     attributes: {
       include: [[db.literal(`CASE WHEN salePrice = 0 THEN price ELSE salePrice END`), "priceWithSale"]],
     },
-    where: {
-      active,
-    },
+    where: {},
     order: [[]],
   };
   let minPrice = 0,
@@ -300,7 +320,8 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
 
       const productsCount = await Product.count({
         where: {
-          active: 2,
+          ...(active ? { active } : {}),
+          ...(sold ? { sold: JSON.stringify(sold) } : {}),
           userId,
         },
       });
@@ -308,7 +329,7 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
       const soldProductsCount = await Product.count({
         where: {
           userId,
-          active: 2,
+          ...(active ? { active } : {}),
           sold: true,
         },
       });
@@ -323,7 +344,8 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
         await Product.findOne({
           attributes: [[db.literal(`MIN(CASE WHEN salePrice = 0 THEN price ELSE LEAST(price, salePrice) END)`), "minPrice"]],
           where: {
-            active,
+            ...(active ? { active } : {}),
+            ...(sold ? { sold: JSON.stringify(sold) } : {}),
             userId: Number(userId),
           },
           raw: true,
@@ -332,7 +354,8 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
 
       maxPrice = await Product.max("price", {
         where: {
-          active,
+          ...(active ? { active } : {}),
+          ...(sold ? { sold: JSON.stringify(sold) } : {}),
           userId: Number(userId),
         },
       });
@@ -355,7 +378,8 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
         await Product.findOne({
           attributes: [[db.literal(`MIN(CASE WHEN salePrice = 0 THEN price ELSE LEAST(price, salePrice) END)`), "minPrice"]],
           where: {
-            active,
+            ...(active ? { active } : {}),
+            ...(sold ? { sold: JSON.stringify(sold) } : {}),
             subCategoryId,
           },
           raw: true,
@@ -363,7 +387,8 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
       ).minPrice;
       maxPrice = await Product.max("price", {
         where: {
-          active,
+          ...(active ? { active } : {}),
+          ...(sold ? { sold: JSON.stringify(sold) } : {}),
           subCategoryId,
         },
       });
@@ -385,7 +410,8 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
         await Product.findOne({
           attributes: [[db.literal(`MIN(CASE WHEN salePrice = 0 THEN price ELSE LEAST(price, salePrice) END)`), "minPrice"]],
           where: {
-            active,
+            ...(active ? { active } : {}),
+            ...(sold ? { sold: JSON.stringify(sold) } : {}),
           },
           include: {
             model: SubCategory,
@@ -398,7 +424,8 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
       ).minPrice;
       maxPrice = await Product.max("price", {
         where: {
-          active,
+          ...(active ? { active } : {}),
+          ...(sold ? { sold: JSON.stringify(sold) } : {}),
         },
         include: {
           model: SubCategory,
@@ -415,14 +442,16 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
         await Product.findOne({
           attributes: [[db.literal(`MIN(CASE WHEN salePrice = 0 THEN price ELSE LEAST(price, salePrice) END)`), "minPrice"]],
           where: {
-            active,
+            ...(active ? { active } : {}),
+            ...(sold ? { sold: JSON.stringify(sold) } : {}),
           },
           raw: true,
         })
       ).minPrice;
       maxPrice = await Product.max("price", {
         where: {
-          active,
+          ...(active ? { active } : {}),
+          ...(sold ? { sold: JSON.stringify(sold) } : {}),
         },
       });
     }
@@ -439,15 +468,13 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
     // console.log("-------------------- minVar --------------------");
     // console.log(minVar);
 
-    options.where = {
-      ...options.where,
-      visible: true,
-      sold: false,
-      // price: {
-      //   [Op.gte]: !isNaN(min) ? Number(min) : undefined,
-      //   [Op.lte]: !isNaN(max) ? Number(max) : undefined,
-      // },
-    };
+    if (sold) {
+      options.where.sold = sold === "true" ? true : false;
+    }
+
+    if (active) {
+      options.where.active = Number(active);
+    }
 
     if ((min && !isNaN(min)) || (max && !isNaN(max))) {
       options.where.price = {};
@@ -464,6 +491,8 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
     console.log("-------------------- min, max --------------------");
     console.log(min, max);
 
+    console.log("-------------------- options.order[0][0] --------------------");
+    console.log(orderBy);
     if (["createdAt", "price", "name"].includes(orderBy)) {
       options.order[0][0] = orderBy === "price" ? "priceWithSale" : orderBy;
     } else {
@@ -522,13 +551,14 @@ exports.getByCategoryId = async function getByCategoryId(req, res) {
 };
 
 exports.getByEachCategory = async function (req, res) {
-  const { limit } = req.query;
+  const { limit, active, sold } = req.query;
 
   function fetchByOneCategory(category) {
     return Product.findAll({
       where: {
         "$SubCategory.categoryId$": category.id,
-        active: 2,
+        active: Number(active),
+        sold: JSON.parse(sold),
       },
       order: db.random(),
       include: {

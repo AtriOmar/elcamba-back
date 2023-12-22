@@ -12,6 +12,7 @@ try {
   sequelize = new Sequelize(database, user, password, {
     host,
     dialect: "mysql",
+    logging: false,
   });
 } catch (err) {
   console.log("----------------------------------");

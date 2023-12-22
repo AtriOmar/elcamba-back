@@ -143,7 +143,6 @@ async function getAllUsers(req, res) {
 
   try {
     const result = await User.findAll(options);
-    console.log("result", result);
     res.status(200).send(result);
   } catch (err) {
     res.status(400).send(err);
@@ -307,7 +306,7 @@ async function uploadFile(file) {
     console.log(newName);
     return newName;
   } catch (err) {
-    return err;
+    throw err;
   }
 }
 
@@ -319,23 +318,25 @@ exports.updatePicture = async function updatePicture(req, res) {
 
   const user = req.user;
 
-  try {
-    var form = new formidable.IncomingForm({ multiples: true });
+  var form = new formidable.IncomingForm({ multiples: true });
 
-    form.parse(req, async function (err, fields, files) {
-      if (err) {
-        res.writeHead(err.httpCode || 400, { "Content-Type": "text/plain" });
-        res.end(String(err));
-        return;
-      }
-
+  form.parse(req, async function (err, fields, files) {
+    if (err) {
+      res.writeHead(err.httpCode || 400, { "Content-Type": "text/plain" });
+      res.end(String(err));
+      return;
+    }
+    try {
       const picture = Object.values(files)[0];
 
       if (user.picture) {
         await removeFile(user.picture);
       }
 
-      const pictureName = picture ? await uploadFile(picture) : null;
+      var pictureName = picture ? await uploadFile(picture) : null;
+
+      console.log("-------------------- pictureName --------------------");
+      console.log(pictureName);
 
       await User.update(
         { picture: pictureName },
@@ -356,11 +357,11 @@ exports.updatePicture = async function updatePicture(req, res) {
         delete userData.password;
         res.status(200).send(userData);
       });
-    });
-  } catch (err) {
-    res.status(400).send(err);
-    console.log(err);
-  }
+    } catch (err) {
+      res.status(400).send(err);
+      console.log(err);
+    }
+  });
 };
 
 async function deleteUserById(req, res) {
