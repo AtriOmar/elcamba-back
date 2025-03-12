@@ -64,7 +64,7 @@ exports.sendVerificationEmail = async function sendVerificationEmail(req, res) {
     console.log(hash);
 
     const transporter = nodemailer.createTransport({
-      host: "mail.advanceticsoft.com",
+      host: process.env.MAIL_SERVER,
       port: 465,
       secure: true, // true for 465, false for other ports
       auth: {
@@ -394,7 +394,7 @@ async function sendResetEmail(req, res) {
     );
 
     const transporter = nodemailer.createTransport({
-      host: "mail.advanceticsoft.com",
+      host: process.env.MAIL_SERVER,
       port: 465,
       secure: true, // true for 465, false for other ports
       auth: {
