@@ -74,7 +74,7 @@ exports.sendVerificationEmail = async function sendVerificationEmail(req, res) {
     });
 
     const mailOptions = {
-      from: "ELCAMBA <noreply@elcamba.net>",
+      from: `ELCAMBA <${process.env.EMAIL}>`,
       to: email,
       subject: "Vérification de compte ELCAMBA",
       html: verificationEmailBody(name || "Mr/Mme,", verificationCode, "1 heure"),
@@ -404,7 +404,7 @@ async function sendResetEmail(req, res) {
     });
 
     const mailOptions = {
-      from: "ELCAMBA <noreply@elcamba.net>",
+      from: `ELCAMBA <${process.env.EMAIL}>`,
       to: email,
       subject: "Réintialisation de mot de passe ELCAMBA",
       html: emailBody(user.username, `${process.env.FRONTEND_URL}/reset-password/${resetToken}`, "1 heure"),
