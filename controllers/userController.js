@@ -553,8 +553,8 @@ function emailBody(name, link, expiration) {
     <section class="container"">
         <div class="logo-container">
 
-            <img src="https://elcamba.net/logo_name.png" alt="ELCAMBA logo name" class="logo-name">
-            <img src="https://elcamba.net/logo_icon.png" alt="ELCAMBA logo icon" class="logo-icon">
+            <img src="${process.env.FRONTEND_URL}/logo_name.png" alt="ELCAMBA logo name" class="logo-name">
+            <img src="${process.env.FRONTEND_URL}/logo_icon.png" alt="ELCAMBA logo icon" class="logo-icon">
         </div>
         <h2>Réinitialisation de mot de passe</h2>
         <p>Bonjour ${name},</p>
@@ -649,8 +649,8 @@ function verificationEmailBody(name, code, expiration) {
     <section class="container"">
         <div class="logo-container">
 
-            <img src="https://elcamba.net/logo_name.png" alt="ELCAMBA logo name" class="logo-name">
-            <img src="https://elcamba.net/logo_icon.png" alt="ELCAMBA logo icon" class="logo-icon">
+            <img src="${process.env.FRONTEND_URL}/logo_name.png" alt="ELCAMBA logo name" class="logo-name">
+            <img src="${process.env.FRONTEND_URL}/logo_icon.png" alt="ELCAMBA logo icon" class="logo-icon">
         </div>
         <h2>Vérification de compte ELCAMBA</h2>
         <p>Bonjour ${name},</p>
